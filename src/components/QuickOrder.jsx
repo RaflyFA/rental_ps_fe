@@ -35,7 +35,11 @@ export default function QuickOrder() {
         const { [f.id_food]: _drop, ...rest } = c
         return next > 0 ? { ...c, [f.id_food]: next } : rest
     })
-    const remove = (id) => setCart(({ [id]: _drop, ...rest }) => rest)
+    const remove = (id) => setCart((c) => {
+        const next = { ...c }
+        delete next[id]
+        return next
+    })
     async function placeOrder() {
         const payload = {reservation_id: Number(reservationId), items: items.map((i) => ({ food_id: i.food.id_food, jumlah: i.qty })),
         }

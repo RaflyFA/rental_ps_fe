@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, ChartSpline, Settings, Gamepad, Monitor, UtensilsCrossed } from 'lucide-react'
+import { LayoutDashboard, ChartSpline, Settings, Gamepad, Monitor, UtensilsCrossed, DoorOpen } from 'lucide-react'
 import Logo from './Logo'
 const nav = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -7,10 +7,13 @@ const nav = [
     { to: '/games', label: 'List Game', icon: Gamepad },
     { to: '/unit', label: 'Unit Playstation', icon: Monitor },
     { to: '/foods', label: 'Food List', icon: UtensilsCrossed },
+    { to: '/rooms', label: 'Room', icon: DoorOpen },
     { to: '/settings', label: 'Settings', icon: Settings }
 ]
 
-function Item({ to, label, icon: Icon, end }) {
+function Item(props) {
+    const { to, label, icon, end } = props
+    const Icon = icon
     return (
         <NavLink
         to={to}
