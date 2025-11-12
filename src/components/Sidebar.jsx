@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, ChartSpline, Settings } from 'lucide-react'
+import { LayoutDashboard, ChartSpline, Settings, Gamepad, Monitor,} from 'lucide-react'
 import Logo from './Logo'
 
 
@@ -7,6 +7,8 @@ const nav = [
 { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
 { to: '/analytics', label: 'Analytics', icon: ChartSpline },
 { to: '/settings', label: 'Settings', icon: Settings },
+{ to: '/games', label: 'List Game', icon: Gamepad },
+{ to: '/unit', label: 'Unit Playstation', icon: Monitor },
 ]
 
 
