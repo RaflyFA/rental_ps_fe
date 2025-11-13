@@ -63,7 +63,11 @@ ${open ? "translate-x-0" : "-translate-x-full"}`}
             strokeWidth="2"
             className="h-5 w-5"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -81,4 +85,3 @@ ${open ? "translate-x-0" : "-translate-x-full"}`}
     </aside>
   );
 }
-

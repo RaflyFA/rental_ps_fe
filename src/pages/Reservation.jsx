@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react"; // <-- Impor useRef
+import { Link } from "react-router-dom";
 
 // --- Icon SVG (Tidak diubah) ---
 const IconPencil = () => (
@@ -1145,7 +1146,23 @@ export default function Analytics() {
         </>
       )}
 
-      {/* 3. Popup (Modal) (Tidak diubah) */}
+      {/* 3. Order Food CTA */}
+      <div className="mt-6">
+        <div className="rounded-lg p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+          <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+            Butuh makanan atau camilan selama bermain? Anda bisa memesan makanan
+            dan kami antar langsung ke ruangan.
+          </p>
+          <Link
+            to="/foods"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+          >
+            Order Food
+          </Link>
+        </div>
+      </div>
+
+      {/* 4. Popup (Modal) (Tidak diubah) */}
       <ReservationModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
