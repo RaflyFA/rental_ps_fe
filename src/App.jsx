@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import DashboardLayout from './layouts/DashboardLayout'
 import Dashboard from './pages/Dashboard'
-import Analytics from './pages/Analytics'
+import Analytics from './pages/Reservation'
 import Settings from './pages/Settings'
 import Games from './pages/Games'
 import Unit from './pages/Unit'
