@@ -7,6 +7,8 @@ import {
   Monitor,
   UtensilsCrossed,
   DoorOpen,
+  SquareUserRound,
+  IdCard
 } from "lucide-react";
 import Logo from "./Logo";
 
@@ -17,6 +19,8 @@ const nav = [
   { to: "/unit", label: "Unit Playstation", icon: Monitor },
   { to: "/foods", label: "Food List", icon: UtensilsCrossed },
   { to: "/rooms", label: "Room", icon: DoorOpen },
+  { to: "/customer", label: "Customer", icon: SquareUserRound },
+  { to: "/membership", label: "Membership", icon: IdCard },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

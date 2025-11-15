@@ -18,6 +18,8 @@ return (
     <Route path="foods" element={<FoodList />} />
     <Route path="games" element={<Games />} />
     <Route path="rooms" element={<Room />} />
+    <Route path="customer" element={<Room />} />
+    <Route path="membership" element={<Room />} />
     <Route path="unit" element={<Unit />} />
     <Route path="settings" element={<Settings />} />
     <Route path="*" element={<Navigate to="/" replace />} />
