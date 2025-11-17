@@ -23,7 +23,7 @@ export default function QuickOrder() {
     const [cart, setCart] = useState({})
     useEffect(() => {
         let alive = true
-        fetch('/api/foods')
+        fetch('/foods')
         .then((r) => { if (!r.ok) throw new Error('bad'); return r.json() })
         .then((data) => { if (alive) setFoods(data) })
         .catch(() => {

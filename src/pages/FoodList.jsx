@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Trash2, Pencil, Search } from 'lucide-react'
+import { Plus, Trash2, Pencil, Search, ChevronRight, ChevronLeft } from 'lucide-react'
+const API_BASE = "http://localhost:3000";
+const itemMax = 5
 
 export default function FoodList() {
   const [foods, setFoods] = useState([])
@@ -9,10 +11,11 @@ export default function FoodList() {
   const [form, setForm] = useState({ nama_makanan: '', harga: '' })
   const [formError, setFormError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState({ open: false, target: null, })
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     let alive = true
-    fetch('/api/foods')
+    fetch(`${API_BASE}/foods`)
       .then((r) => { if (!r.ok) throw new Error('bad'); return r.json() })
       .then((data) => { if (alive) setFoods(data) })
       .catch(() => {
@@ -24,14 +27,20 @@ export default function FoodList() {
       })
     return () => { alive = false }
   }, [])
+  useEffect(() => {setPage(1)}, [query])
 
   const filtered = useMemo(
-    () => foods.filter((f) =>
-      f.nama_makanan.toLowerCase().includes(query.toLowerCase())
+      () => foods.filter((f) =>
+        f.nama_makanan.toLowerCase().includes(query.toLowerCase())
     ),
     [foods, query]
-  )
-
+)
+  const pageCount = Math.max(1, Math.ceil(filtered.length / itemMax))
+  const currentPage = Math.min(page, pageCount)
+  const startIndex = (currentPage - 1) * itemMax
+  const paginatedFoods = filtered.slice(startIndex, startIndex + itemMax)
+  const from = filtered.length === 0 ? 0 : startIndex + 1
+  const to = Math.min(startIndex + itemMax, filtered.length)
   const openCreateModal = () => {
     setEditingFood(null)
     setForm({ nama_makanan: '', harga: '' })
@@ -57,7 +66,7 @@ export default function FoodList() {
     try {
       let resultFood
       if (editingFood) {
-        const r = await fetch(`/api/foods/${editingFood.id_food}`, {
+        const r = await fetch(`${API_BASE}/foods/${editingFood.id_food}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -70,14 +79,18 @@ export default function FoodList() {
           )
         )
       } else {
-        const r = await fetch('/api/foods', {
+        const r = await fetch(`${API_BASE}/foods`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
         if (!r.ok) throw new Error('create failed')
         resultFood = await r.json()
-        setFoods((prev) => [resultFood, ...prev])
+        setFoods((prev) => {
+            const next = [...prev, resultFood]
+            next.sort((a, b) => a.id_food - b.id_food)
+            return next
+        })
       }
       setOpenForm(false)
       setEditingFood(null)
@@ -87,15 +100,15 @@ export default function FoodList() {
       console.error(err)
       setFormError(
         editingFood
-          ? 'Gagal menyimpan perubahan. Pastikan backend PUT /api/foods/:id sudah siap.'
-          : 'Gagal membuat menu. Pastikan backend POST /api/foods sudah siap.'
+          ? 'Gagal menyimpan perubahan. Pastikan backend PUT /foods/:id sudah siap.'
+          : 'Gagal membuat menu. Pastikan backend POST /foods sudah siap.'
       )
     }
   }
 
   async function removeFood(id) {
     try {
-      const r = await fetch(`/api/foods/${id}`, { method: 'DELETE' })
+      const r = await fetch(`${API_BASE}/foods/${id}`, { method: 'DELETE' })
       if (!r.ok) throw new Error('delete failed')
       setFoods((prev) => prev.filter((f) => f.id_food !== id))
     } catch (err) {
@@ -154,7 +167,7 @@ export default function FoodList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-900">
-            {filtered.map((f) => (
+            {paginatedFoods.map((f) => (
               <tr key={f.id_food}>
                 <td className="px-4 py-3 text-sm text-gray-500">{f.id_food}</td>
                 <td className="px-4 py-3 text-sm font-medium">{f.nama_makanan}</td>
@@ -184,6 +197,34 @@ export default function FoodList() {
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between">
+        <p className="text-gray-500 dark:text-gray-400">
+          Menampilkan <span className="font-semibold">{from}</span>–
+          <span className="font-semibold text-gray-700 dark:text-gray-200">{to}</span> dari{' '}
+          <span className="font-semibold text-gray-700 dark:text-gray-200">{filtered.length}</span> menu
+        </p>
+        <div className="inline-flex items-center gap-1 self-end md:self-auto">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
+          >
+            <ChevronLeft className="h-5 w-5 text-gray-400" />
+          </button>
+          <span className="text-xs text-gray-600 dark:text-gray-300">
+            Halaman {currentPage} / {pageCount}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            disabled={currentPage === pageCount}
+            className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
+          >
+            <ChevronRight className="h-5 w-5 text-gray-400" />
+          </button>
+        </div>
       </div>
 
       {openForm && (
