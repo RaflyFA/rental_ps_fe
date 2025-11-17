@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2, Pencil, Search, ChevronRight, ChevronLeft } from 'lucide-react'
-const API_BASE = "http://localhost:3000";
+const API_BASE = import.meta.env.VITE_API_URL;
 const itemMax = 5
 
 export default function FoodList() {
@@ -15,7 +15,7 @@ export default function FoodList() {
 
   useEffect(() => {
     let alive = true
-    fetch(`${API_BASE}/foods`)
+    fetch(`${API_BASE}/api/foods`)
       .then((r) => { if (!r.ok) throw new Error('bad'); return r.json() })
       .then((data) => { if (alive) setFoods(data) })
       .catch(() => {
@@ -66,7 +66,7 @@ export default function FoodList() {
     try {
       let resultFood
       if (editingFood) {
-        const r = await fetch(`${API_BASE}/foods/${editingFood.id_food}`, {
+        const r = await fetch(`${API_BASE}/api/foods/${editingFood.id_food}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -79,7 +79,7 @@ export default function FoodList() {
           )
         )
       } else {
-        const r = await fetch(`${API_BASE}/foods`, {
+        const r = await fetch(`${API_BASE}/api/foods`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -108,7 +108,7 @@ export default function FoodList() {
 
   async function removeFood(id) {
     try {
-      const r = await fetch(`${API_BASE}/foods/${id}`, { method: 'DELETE' })
+      const r = await fetch(`${API_BASE}/api/foods/${id}`, { method: 'DELETE' })
       if (!r.ok) throw new Error('delete failed')
       setFoods((prev) => prev.filter((f) => f.id_food !== id))
     } catch (err) {
@@ -211,7 +211,7 @@ export default function FoodList() {
             disabled={currentPage === 1}
             className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
           >
-            <ChevronLeft className="h-5 w-5 text-gray-400" />
+            <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="text-xs text-gray-600 dark:text-gray-300">
             Halaman {currentPage} / {pageCount}
@@ -222,7 +222,7 @@ export default function FoodList() {
             disabled={currentPage === pageCount}
             className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
           >
-            <ChevronRight className="h-5 w-5 text-gray-400" />
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
