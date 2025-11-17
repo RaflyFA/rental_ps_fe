@@ -8,8 +8,19 @@ export default function QuickOrder() {
     const [query, setQuery] = useState('')
     const [searchParams] = useSearchParams()
     const reservationId = searchParams.get("reservation") || ""
-    const membershipId = searchParams.get("membership") || ""
-    const [cart, setCart] = useState({}) // { [food_id]: qty }
+    const reservationName = searchParams.get("customer") || ""
+    const reservationRoom = searchParams.get("rooms") || ""
+    const reservationStart = searchParams.get("start") || ""
+    const reservationEnd = searchParams.get("end") || ""
+    let reservationTimeText = "";
+    if (reservationStart && reservationEnd) {
+        const start = new Date(reservationStart);
+        const end   = new Date(reservationEnd);
+        const startText = start.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+        const endText = end.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+        reservationTimeText = `${startText} - ${endText}`;
+    }""
+    const [cart, setCart] = useState({})
     useEffect(() => {
         let alive = true
         fetch('/api/foods')
@@ -124,14 +135,18 @@ export default function QuickOrder() {
                         )}
                         <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
                             <span className="text-gray-700 dark:text-gray-300">Reservasi</span>
-                            <p className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
-                                {reservationId
-                                    ? `ID Reservasi ${reservationId}`
-                                    : `Tidak ada reservasi terpilih (buka dari halaman reservasi)`}
-                                {membershipId
-                                    ? `Status member`
-                                    : ``}
-                            </p>
+                            <div className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+                              {reservationId ? (
+                                <>
+                                  <div>ID Reservasi {reservationId}</div>
+                                  {reservationName && <div>Pelanggan: {reservationName}</div>}
+                                  {reservationRoom && <div>Ruangan: {reservationRoom}</div>}
+                                  {reservationTimeText && <div>Waktu: {reservationTimeText}</div>}
+                                </>
+                              ) : (
+                                <>Tidak ada reservasi terpilih (buka dari halaman reservasi)</>
+                              )}
+                            </div>
                             <div className="mt-4 flex items-center justify-between">
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
                                 <p className="text-xl font-bold">{fmtIDR(total)}</p>
