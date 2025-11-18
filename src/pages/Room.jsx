@@ -127,6 +127,13 @@ export default function Room() {
       {/* TABLE */}
       <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-800">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+          <colgroup>
+            <col style={{ width: "200px" }} />
+            <col style={{ width: "150px" }} />
+            <col style={{ width: "150px" }} />
+            <col style={{ width: "120px" }} />
+            <col style={{ width: "120px" }} />
+          </colgroup>
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
               {/* <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">ID</th> */}
