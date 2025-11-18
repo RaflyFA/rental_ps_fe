@@ -1,6 +1,19 @@
-import { NavLink } from "react-router-dom";
-import {LayoutDashboard,CalendarRange,Settings,Gamepad,Monitor,UtensilsCrossed,DoorOpen,SquareUserRound,IdCard,User,} from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  CalendarRange,
+  Settings,
+  Gamepad,
+  Monitor,
+  UtensilsCrossed,
+  DoorOpen,
+  SquareUserRound,
+  IdCard,
+  User,
+  LogOut,
+} from "lucide-react";
 import Logo from "./Logo";
+import { useAuthStore } from "../store/useAuthStore";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -38,6 +51,19 @@ ${
 }
 
 export default function Sidebar({ open, onClose }) {
+  const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
+
+  const handleLogout = () => {
+    logout()
+      .catch((error) => {
+        console.error("Logout gagal", error);
+      })
+      .finally(() => {
+        navigate("/login", { replace: true });
+      });
+  };
+
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-white p-4 shadow-xl transition-transform dark:bg-gray-900 lg:translate-x-0 lg:shadow-none
@@ -74,10 +100,16 @@ ${open ? "translate-x-0" : "-translate-x-full"}`}
         ))}
       </div>
 
-      <div className="mt-8 rounded-xl border border-dashed border-gray-200 p-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
-        <p className="font-semibold text-gray-700 dark:text-gray-200">Tip</p>
-        <p>Replace these links with your real pages and permissions.</p>
-      </div>
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="mt-8 w-full rounded-xl bg-gradient-to-r from-red-500 to-rose-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-500/30 transition hover:from-red-600 hover:to-rose-600 focus:outline-none focus:ring-2 focus:ring-red-400 dark:from-red-600 dark:to-rose-600"
+      >
+        <span className="inline-flex items-center justify-center gap-2">
+          <LogOut size={18} />
+          Logout
+        </span>
+      </button>
     </aside>
   );
 }

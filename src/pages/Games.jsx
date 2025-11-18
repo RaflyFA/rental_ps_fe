@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Pencil, Trash2, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api";
 
-const itemMax = 5; // jumlah item per halaman sama seperti foodlist.jsx
+const itemMax = 5; // jumlah item per halaman dari backend
 
 export default function Games() {
   const [games, setGames] = useState([]);
@@ -10,6 +10,9 @@ export default function Games() {
 
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+
+  const [pageCount, setPageCount] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const [open, setOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
@@ -23,15 +26,24 @@ export default function Games() {
     setTimeout(() => setNotif(null), 2500);
   };
 
+  // ===============================
+  // FETCH DATA
+  // ===============================
   useEffect(() => {
-    fetchGames();
     fetchUnits();
   }, []);
 
+  useEffect(() => {
+    fetchGames();
+  }, [page]);
+
   const fetchGames = async () => {
     try {
-      const data = await apiGet("/games");
-      setGames(data);
+      const data = await apiGet(`/games?page=${page}&limit=${itemMax}`);
+
+      setGames(data.data);
+      setTotal(data.total);
+      setPageCount(data.totalPages);
     } catch (err) {
       showNotif("Gagal memuat data game", "error");
     }
@@ -46,18 +58,24 @@ export default function Games() {
     }
   };
 
-  // reset ke page 1 kalau search berubah
-  useEffect(() => {
-    setPage(1);
-  }, [query]);
+  // ===============================
+  // FILTER SEARCH
+  // ===============================
+  const filtered = useMemo(() => {
+    return games.filter((g) =>
+      g.nama_game.toLowerCase().includes(query.toLowerCase())
+    );
+  }, [games, query]);
 
-  // =============================
-  // CREATE OR UPDATE GAME
-  // =============================
+  const paginatedGames = filtered; // BE pagination sudah handle, FE hanya filter
+
+  // ===============================
+  // CREATE / UPDATE
+  // ===============================
   const saveGame = async () => {
     const payload = {
       nama_game: newGame.name,
-      id_unit: Number(newGame.unit),
+      id_unit: Number(newGame.unit)
     };
 
     const isEdit = newGame.id !== null;
@@ -74,42 +92,24 @@ export default function Games() {
       setOpen(false);
       setNewGame({ id: null, name: "", unit: "" });
       fetchGames();
-    } catch (err) {
+    } catch {
       showNotif("Gagal menyimpan data", "error");
     }
   };
 
-  // =============================
+  // ===============================
   // DELETE
-  // =============================
+  // ===============================
   const doDelete = async () => {
     try {
       await apiDelete(`/games/${deleteConfirm.id}`);
       showNotif("Game berhasil dihapus");
       fetchGames();
-    } catch (err) {
+    } catch {
       showNotif("Gagal menghapus data", "error");
     }
     setDeleteConfirm({ open: false, id: null });
   };
-
-  // =============================
-  // FILTER + PAGINATION
-  // =============================
-  const filtered = useMemo(() => {
-    return games.filter((g) =>
-      g.nama_game.toLowerCase().includes(query.toLowerCase())
-    );
-  }, [games, query]);
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / itemMax));
-  const currentPage = Math.min(page, pageCount);
-
-  const startIndex = (currentPage - 1) * itemMax;
-  const paginatedGames = filtered.slice(startIndex, startIndex + itemMax);
-
-  const from = filtered.length === 0 ? 0 : startIndex + 1;
-  const to = Math.min(startIndex + itemMax, filtered.length);
 
   return (
     <section className="space-y-6">
@@ -145,10 +145,18 @@ export default function Games() {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">No</th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">Nama Game</th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">Nama Unit</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide">Aksi</th>
+              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
+                No
+              </th>
+              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
+                Nama Game
+              </th>
+              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
+                Nama Unit
+              </th>
+              <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide">
+                Aksi
+              </th>
             </tr>
           </thead>
 
@@ -156,7 +164,7 @@ export default function Games() {
             {paginatedGames.map((game, index) => (
               <tr key={game.id_game}>
                 <td className="px-4 py-3 text-sm text-gray-500">
-                  {startIndex + index + 1}
+                  {(page - 1) * itemMax + index + 1}
                 </td>
                 <td className="px-4 py-3 text-sm font-medium">{game.nama_game}</td>
                 <td className="px-4 py-3 text-sm">{game.unit?.nama_unit ?? "-"}</td>
@@ -167,7 +175,7 @@ export default function Games() {
                       setNewGame({
                         id: game.id_game,
                         name: game.nama_game,
-                        unit: game.id_unit,
+                        unit: game.id_unit
                       });
                       setOpen(true);
                     }}
@@ -177,7 +185,9 @@ export default function Games() {
                   </button>
 
                   <button
-                    onClick={() => setDeleteConfirm({ open: true, id: game.id_game })}
+                    onClick={() =>
+                      setDeleteConfirm({ open: true, id: game.id_game })
+                    }
                     className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -197,32 +207,37 @@ export default function Games() {
         </table>
       </div>
 
-      {/* PAGINATION FOOTER */}
+      {/* PAGINATION */}
       <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between">
         <p className="text-gray-500 dark:text-gray-400">
-          Menampilkan <span className="font-semibold">{from}</span>–
-          <span className="font-semibold text-gray-700 dark:text-gray-200">{to}</span> dari{" "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">{filtered.length}</span> game
+          Halaman{" "}
+          <span className="font-semibold text-gray-700 dark:text-gray-200">
+            {page}
+          </span>{" "}
+          dari{" "}
+          <span className="font-semibold text-gray-700 dark:text-gray-200">
+            {pageCount}
+          </span>
         </p>
 
         <div className="inline-flex items-center gap-1 self-end md:self-auto">
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
+            disabled={page === 1}
             className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
 
           <span className="text-xs text-gray-600 dark:text-gray-300">
-            Halaman {currentPage} / {pageCount}
+            Halaman {page} / {pageCount}
           </span>
 
           <button
             type="button"
             onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-            disabled={currentPage === pageCount}
+            disabled={page === pageCount}
             className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
           >
             <ChevronRight className="h-4 w-4" />
@@ -234,14 +249,18 @@ export default function Games() {
       {open && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
-            <h2 className="text-lg font-semibold">{newGame.id ? "Edit Game" : "Tambah Game"}</h2>
+            <h2 className="text-lg font-semibold">
+              {newGame.id ? "Edit Game" : "Tambah Game"}
+            </h2>
 
             <form className="mt-4 space-y-4">
               <label className="block">
                 <span className="text-sm">Nama Game</span>
                 <input
                   value={newGame.name}
-                  onChange={(e) => setNewGame((s) => ({ ...s, name: e.target.value }))}
+                  onChange={(e) =>
+                    setNewGame((s) => ({ ...s, name: e.target.value }))
+                  }
                   className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 />
               </label>
@@ -250,7 +269,9 @@ export default function Games() {
                 <span className="text-sm">Nama Unit</span>
                 <select
                   value={newGame.unit}
-                  onChange={(e) => setNewGame((s) => ({ ...s, unit: e.target.value }))}
+                  onChange={(e) =>
+                    setNewGame((s) => ({ ...s, unit: e.target.value }))
+                  }
                   className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="">-- Pilih Unit --</option>
@@ -315,15 +336,11 @@ export default function Games() {
       {/* NOTIF */}
       {notif && (
         <div
-          className={`
-            fixed bottom-6 right-6 z-50
-            rounded-xl px-4 py-3 text-sm shadow-lg transition-all duration-300
-            ${
-              notif.type === "error"
-                ? "bg-red-100 border border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300"
-                : "bg-green-100 border border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300"
-            }
-          `}
+          className={`fixed bottom-6 right-6 z-50 rounded-xl px-4 py-3 text-sm shadow-lg transition-all duration-300 ${
+            notif.type === "error"
+              ? "bg-red-100 border border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300"
+              : "bg-green-100 border border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300"
+          }`}
         >
           {notif.msg}
         </div>

@@ -1,34 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 const IconPencil = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-    <path d="M15 5l4 4" />
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /><path d="M15 5l4 4" />
   </svg>
 );
 const IconTrash = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 6h18" />
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
     <path d="M10 11v6" />
@@ -37,17 +18,7 @@ const IconTrash = () => (
   </svg>
 );
 const IconSearch = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8" />
     <line x1="21" x2="16.65" y1="21" y2="16.65" />
   </svg>
@@ -108,7 +79,6 @@ const IconCalendarDate = () => (
   </svg>
 );
 
-const mockReservations = [];
 const mockRooms = [
   { id_room: 1, nama_room: "Room 1 (PS4)" },
   { id_room: 2, nama_room: "Room 2 (PS4)" },
@@ -189,7 +159,7 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
     }));
   }, [reservation]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (typeof onSave === "function") {
       onSave(formData);
@@ -315,6 +285,8 @@ function ReservationDetailModal({ isOpen, onClose, reservation, onDelete }) {
   const end = new Date(reservation.waktu_selesai);
   const navigate = useNavigate();
 
+  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="bg-white dark:bg-gray-900 w-full max-w-md p-6 rounded-lg shadow-xl">
@@ -346,8 +318,8 @@ function ReservationDetailModal({ isOpen, onClose, reservation, onDelete }) {
         <div className="flex gap-3 mt-4">
           <button
             onClick={() => navigate(`/orderfoods?reservation=${reservation.id_reservation}` +
-              `&name=${encodeURIComponent(reservation.customer_name || "-")}` +
-              `&room=${encodeURIComponent(reservation.nama_room || "")}` +
+              `&customer=${encodeURIComponent(reservation.customer_name || "-")}` +
+              `&rooms=${encodeURIComponent(reservation.nama_room || "")}` +
               `&start=${encodeURIComponent(reservation.waktu_mulai)}` +
               `&end=${encodeURIComponent(reservation.waktu_selesai || "")}`)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md mr-auto"
@@ -713,20 +685,19 @@ export default function Reservation() {
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-
-  // Reservations state (start from mock data)
-  const [reservations, setReservations] = useState(mockReservations);
+  const [reservations, setReservations] = useState([]);
   const [isModalNew, setIsModalNew] = useState(true);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedDetailReservation, setSelectedDetailReservation] =
     useState(null);
-  // Search state and history
   const [searchQuery, setSearchQuery] = useState("");
   const [searchHistory, setSearchHistory] = useState([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const searchContainerRef = useRef(null);
+  const [historyReservations, setHistoryReservations] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // load search history from localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem("rp_search_history");
@@ -735,8 +706,6 @@ export default function Reservation() {
       console.warn("Failed to load search history", e);
     }
   }, []);
-
-  // persist search history
   useEffect(() => {
     try {
       localStorage.setItem("rp_search_history", JSON.stringify(searchHistory));
@@ -744,8 +713,6 @@ export default function Reservation() {
       console.warn("Failed to save search history", e);
     }
   }, [searchHistory]);
-
-  // click outside to close dropdown
   useEffect(() => {
     function onDocClick(e) {
       if (!searchContainerRef.current) return;
@@ -756,8 +723,14 @@ export default function Reservation() {
     document.addEventListener("click", onDocClick);
     return () => document.removeEventListener("click", onDocClick);
   }, []);
-
-  // Search helpers
+  useEffect(() => {
+    fetchReservationsByDate(selectedDate);
+  }, [selectedDate]);
+  useEffect(() => {
+    if (showHistory) {
+      fetchReservationHistory();
+    }
+  }, [showHistory]);
   const addToSearchHistory = (q) => {
     const t = q.trim();
     if (!t) return;
@@ -801,6 +774,33 @@ export default function Reservation() {
   const minDateString = toYYYYMMDD(today);
   const maxDateString = toYYYYMMDD(maxDate);
 
+  async function fetchReservationsByDate(dateObj) {
+    const dateStr = toYYYYMMDD(dateObj);
+    try {
+      setLoading(true);
+      setError("");
+      const res = await fetch(`${API_BASE}/api/reservations?date=${dateStr}`);
+      if (!res.ok) throw new Error("Failed to load reservations");
+      const data = await res.json();
+      setReservations(data);
+    } catch (e) {
+      console.error(e);
+      setError("Gagal memuat data reservasi.");
+      setReservations([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+  async function fetchReservationHistory() {
+    try {
+      const res = await fetch(`${API_BASE}/api/reservations`);
+      if (!res.ok) throw new Error("Failed to load history");
+      const data = await res.json();
+      setHistoryReservations(data);
+    } catch (e) {
+      console.error(e);
+    }
+  }
   const handleOpenModal = (reservation = null, isNew = false) => {
     setSelectedReservation(reservation);
     setIsModalNew(isNew);
@@ -813,36 +813,48 @@ export default function Reservation() {
     setIsModalNew(true);
   };
 
-  const handleSaveReservation = (formData) => {
-    // Build reservation object
-    const start = new Date(`${formData.date}T${formData.time}:00`);
-    const end = new Date(
-      start.getTime() + (formData.duration || 1) * 60 * 60 * 1000
-    );
-    const newId =
-      Math.max(0, ...reservations.map((r) => r.id_reservation || 0)) + 1;
-    const pricePerHour = 7000;
-    const newReservation = {
-      id_reservation: newId,
-      customer_name: formData.customer_name || "-",
-      nama_room: formData.nama_room || formData.room || "",
-      waktu_mulai: `${formData.date}T${formData.time}:00`,
-      waktu_selesai: `${end.getFullYear()}-${String(
-        end.getMonth() + 1
-      ).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}T${String(
-        end.getHours()
-      ).padStart(2, "0")}:00:00`,
-      durasi: formData.duration || 1,
-      total_harga: (formData.duration || 1) * pricePerHour,
-      payment_status: formData.payment_status || null,
-      payment_method: formData.payment_method || null,
+  const handleSaveReservation = async (formData) => {
+    const payload = {
+      customer_name: formData.customer_name,
+      nama_room: formData.nama_room,
+      date: formData.date,
+      time: formData.time,
+      duration: formData.duration,
+      payment_method: formData.payment_method || "Cash",
     };
-
-    setReservations((prev) => [...prev, newReservation]);
+    try {
+      if (isModalNew || !selectedReservation?.id_reservation) {
+        const res = await fetch(`${API_BASE}/api/reservations`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error("Failed to create");
+        await res.json();
+      } else {
+        const res = await fetch(
+          `${API_BASE}/api/reservations/${selectedReservation.id_reservation}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+        if (!res.ok) throw new Error("Failed to update");
+        await res.json();
+      }
+      await fetchReservationsByDate(selectedDate);
+      if (showHistory) {
+        await fetchReservationHistory();
+      }
+      handleCloseModal();
+    } catch (e) {
+      console.error(e);
+      alert("Gagal menyimpan reservasi. Coba cek backend / console.");
+    }
   };
 
   const handleAvailableClick = ({ room, hour, dateString }) => {
-    // Prefill modal data for new reservation
     const prefill = {
       customer_name: "",
       nama_room: room.nama_room,
@@ -856,53 +868,52 @@ export default function Reservation() {
     setIsModalNew(true);
     setIsModalOpen(true);
   };
-
   const handleBookedClick = (reservation) => {
     setSelectedDetailReservation(reservation);
     setIsDetailOpen(true);
   };
-
-  const handleDeleteReservation = (id) => {
-    // Confirm deletion
+  const handleDeleteReservation = async (id) => {
     try {
       const ok = window.confirm("Yakin ingin menghapus reservasi ini?");
       if (!ok) return;
-    } catch {
-      // In non-browser environment, just proceed
-    }
 
-    setReservations((prev) => prev.filter((r) => r.id_reservation !== id));
+      const res = await fetch(`${API_BASE}/api/reservations/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete");
 
-    // If currently viewing details of the deleted reservation, close it
-    if (
-      selectedDetailReservation &&
-      selectedDetailReservation.id_reservation === id
-    ) {
-      setIsDetailOpen(false);
-      setSelectedDetailReservation(null);
+      // buang dari state lokal
+      setReservations((prev) => prev.filter((r) => r.id_reservation !== id));
+      setHistoryReservations((prev) =>
+        prev.filter((r) => r.id_reservation !== id)
+      );
+
+      if (
+        selectedDetailReservation &&
+        selectedDetailReservation.id_reservation === id
+      ) {
+        setIsDetailOpen(false);
+        setSelectedDetailReservation(null);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Gagal menghapus reservasi.");
     }
   };
 
   const handleDateChange = (e) => {
-    // Input date memberikan string "YYYY-MM-DD" dalam UTC.
-    // Konversi kembali ke Date object dengan mengimbangi timezone.
     const newDate = new Date(e.target.value);
     const userTimezoneOffset = newDate.getTimezoneOffset() * 60000;
     setSelectedDate(new Date(newDate.getTime() + userTimezoneOffset));
   };
-
-  // --- HANDLER BARU untuk Tombol Visual ---
   const handleDateButtonClick = () => {
-    // Membuka date picker secara programatik
     if (
       dateInputRef.current &&
       typeof dateInputRef.current.showPicker === "function"
     ) {
       try {
-        // Cara modern
         dateInputRef.current.showPicker();
       } catch (error) {
-        // Fallback jika showPicker gagal (seperti di iframe)
         console.warn(
           "showPicker() gagal, menggunakan fallback .click()",
           error
@@ -910,7 +921,6 @@ export default function Reservation() {
         dateInputRef.current.click();
       }
     } else {
-      // Fallback untuk browser yang sangat lama
       if (dateInputRef.current) {
         dateInputRef.current.click();
       }
@@ -919,7 +929,6 @@ export default function Reservation() {
 
   return (
     <section className="space-y-6">
-      {/* 1. Bagian Atas: Kontrol & Filter */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">
           {showHistory ? "History Reservasi" : "Manajemen Reservasi"}
@@ -940,22 +949,16 @@ export default function Reservation() {
           </button>
         </div>
       </div>
-
-      {/* Render History atau Timeline berdasarkan showHistory state */}
       {showHistory ? (
         <>
-          {/* History View */}
           <ReservationHistoryTable
-            reservations={reservations}
+            reservations={historyReservations}
             onDelete={handleDeleteReservation}
           />
         </>
       ) : (
         <>
-          {/* Timeline View */}
-          {/* Baris Filter */}
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Filter 1: Pencarian (Tidak diubah) */}
             <div className="relative grow" ref={searchContainerRef}>
               <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                 <IconSearch />
@@ -1128,8 +1131,6 @@ export default function Reservation() {
           })()}
         </>
       )}
-
-      {/* 4. Popup (Modal) (Tidak diubah) */}
       <ReservationModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
@@ -1137,7 +1138,6 @@ export default function Reservation() {
         isNew={isModalNew}
         onSave={handleSaveReservation}
       />
-
       <ReservationDetailModal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}

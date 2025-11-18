@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { apiGet } from "../lib/api";
 
 const MEMBERSHIP_LOOKUP = {
   1: { id_membership: 1, nama_tier: "Bronze", diskon_persen: 5 },
@@ -8,9 +9,9 @@ const MEMBERSHIP_LOOKUP = {
 };
 
 const initialCustomers = [
-  { id_customer: 1, nama: "Budi Setiawan", no_hp: "081234567890", membership_id: 1 },
-  { id_customer: 2, nama: "Sinta Wijaya", no_hp: "082198873210", membership_id: 2 },
-  { id_customer: 3, nama: "Rizky Saputra", no_hp: "085278331120", membership_id: 3 },
+  // { id_customer: 1, nama: "Budi Setiawan", no_hp: "081234567890", membership_id: 1 },
+  // { id_customer: 2, nama: "Sinta Wijaya", no_hp: "082198873210", membership_id: 2 },
+  // { id_customer: 3, nama: "Rizky Saputra", no_hp: "085278331120", membership_id: 3 },
 ];
 
 export default function Customer() {
@@ -34,6 +35,15 @@ export default function Customer() {
       return matchName || matchTier;
     });
   }, [customers, query]);
+
+  const fetchCustomer = async () => {
+    const data = await apiGet('/customers');
+    console.log("Fetched customers:", data);
+  }
+
+  useEffect(() => {
+    fetchCustomer();
+  }, []);
 
   const closeModal = () => {
     setModalState({ open: false, mode: "create" });
