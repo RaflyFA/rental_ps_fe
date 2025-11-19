@@ -61,12 +61,9 @@ export default function Room() {
     try {
       if (editRoom) {
         // untuk Update
-        const updated = await apiPut(`/room/${editRoom.id_room}`, payload);
-        setRooms((prev) =>
-          prev.map((r) => (r.id_room === updated.id_room ? updated : r))
-        );
-        showNotif("Ruangan berhasil diubah");
+        await apiPut(`/room/${editRoom.id_room}`, payload);
         fetchRooms();
+        showNotif("Ruangan berhasil diubah");
       } else {
         // untuk Create
         const created = await apiPost("/room", payload);
