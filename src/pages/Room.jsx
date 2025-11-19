@@ -3,7 +3,7 @@ import { Plus, Trash2, Pencil, Search, ChevronLeft, ChevronRight } from "lucide-
 
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api.js"; // pastikan apiPut tersedia
 
-const itemMax = 5; // jumlah item per halaman
+const itemMax = 5;
 
 export default function Room() {
   const [rooms, setRooms] = useState([]);

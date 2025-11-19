@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Pencil, Trash2, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api";
 
-const itemMax = 5; // jumlah item per halaman dari backend
+const itemMax = 5;
 
 export default function Games() {
   const [games, setGames] = useState([]);

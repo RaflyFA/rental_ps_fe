@@ -1,16 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Plus,
-  Minus,
-  ShoppingCart,
-  Trash2,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Plus, Minus, ShoppingCart, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { apiGet, apiPost } from "../lib/api";
 
-const API_BASE = import.meta.env.VITE_API_URL || "";
 const PAGE_SIZE = 9;
 
 const fmtIDR = (n) =>
@@ -67,11 +59,11 @@ export default function QuickOrder() {
         const params = new URLSearchParams({
           page: String(page),
           limit: String(PAGE_SIZE),
-          search: query,
+          search: query.trim(),
         });
-        const r = await fetch(`${API_BASE}/api/foods?${params.toString()}`);
-        if (!r.ok) throw new Error("Failed to fetch foods");
-        const { data, meta } = await r.json();
+
+        const { data, meta } = await apiGet(`/foods?${params.toString()}`);
+
         if (!alive) return;
         setFoods(data || []);
         setTotal(meta?.total ?? (data ? data.length : 0));
@@ -145,13 +137,7 @@ export default function QuickOrder() {
     };
 
     try {
-      const r = await fetch(`${API_BASE}/api/order-foods`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!r.ok) throw new Error("Failed to create order");
-      await r.json();
+      await apiPost("/order-foods", payload);
       setCart({});
       alert("Order berhasil dibuat!");
     } catch (e) {
@@ -229,26 +215,16 @@ export default function QuickOrder() {
 
           <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
             <span>
-              Menampilkan{" "}
-              <span className="font-semibold">
-                {from}
-              </span>
-              –
-              <span className="font-semibold">
-                {to}
-              </span>{" "}
-              dari{" "}
-              <span className="font-semibold">
-                {total}
-              </span>{" "}
-              menu
+              Menampilkan <span className="font-semibold">{from}</span>–
+              <span className="font-semibold">{to}</span> dari{" "}
+              <span className="font-semibold">{total}</span> menu
             </span>
             <div className="inline-flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="rounded-xl bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-40 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-1"
+                className="flex items-center gap-1 rounded-xl bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-40 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -261,7 +237,7 @@ export default function QuickOrder() {
                   setPage((p) => Math.min(safeTotalPages, p + 1))
                 }
                 disabled={page === safeTotalPages}
-                className="rounded-xl bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-40 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-1"
+                className="flex items-center gap-1 rounded-xl bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-40 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>

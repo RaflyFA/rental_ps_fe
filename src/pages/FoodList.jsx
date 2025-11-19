@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, Pencil, Search, ChevronRight, ChevronLeft } from "lucide-react";
+import { apiDelete, apiGet, apiPost, apiPut } from "../lib/api"
 
-const API_BASE = import.meta.env.VITE_API_URL || "";
 const PAGE_SIZE = 5;
 
 export default function FoodList() {
@@ -28,9 +28,7 @@ export default function FoodList() {
           limit: String(PAGE_SIZE),
           search: query.trim(),
         });
-        const res = await fetch(`${API_BASE}/api/foods?${params.toString()}`);
-        if (!res.ok) throw new Error("Failed to fetch foods");
-        const { data, meta } = await res.json();
+        const { data, meta } = await apiGet(`/foods?${params.toString()}`);
         console.log("foods response:", { data, meta });
         if (!alive) return;
         setFoods(data || []);
@@ -79,27 +77,12 @@ export default function FoodList() {
     };
     try {
       if (editingFood) {
-        const res = await fetch(
-          `${API_BASE}/api/foods/${editingFood.id_food}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          }
-        );
-        if (!res.ok) throw new Error("update failed");
-        const updated = await res.json();
+        const updated = await apiPut(`/foods/${editingFood.id_food}`, payload);
         setFoods((prev) =>
           prev.map((f) => (f.id_food === updated.id_food ? updated : f))
         );
       } else {
-        const res = await fetch(`${API_BASE}/api/foods`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error("create failed");
-        await res.json(); // ga terlalu dipakai di sini
+        await apiPost("/foods", payload);
         setRefreshToken((x) => x + 1);
       }
       setOpenForm(false);
@@ -110,17 +93,14 @@ export default function FoodList() {
       console.error(err);
       setFormError(
         editingFood
-          ? "Gagal menyimpan perubahan. Pastikan backend PUT /api/foods/:id sudah siap."
-          : "Gagal membuat menu. Pastikan backend POST /api/foods sudah siap."
+          ? "Gagal menyimpan perubahan. Pastikan backend PUT /foods/:id sudah siap."
+          : "Gagal membuat menu. Pastikan backend POST /foods sudah siap."
       );
     }
   }
   async function removeFood(id) {
     try {
-      const res = await fetch(`${API_BASE}/api/foods/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("delete failed");
+      await apiDelete(`/foods/${id}`);
       setFoods((prev) => prev.filter((f) => f.id_food !== id));
       setTotal((t) => Math.max(0, t - 1));
       setRefreshToken((x) => x + 1);
