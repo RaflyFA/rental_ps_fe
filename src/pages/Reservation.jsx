@@ -1,13 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api";
 
-const API_BASE = import.meta.env.VITE_API_URL || "";
-
-const IconPencil = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /><path d="M15 5l4 4" />
-  </svg>
-);
 const IconTrash = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 6h18" />
@@ -24,48 +18,18 @@ const IconSearch = () => (
   </svg>
 );
 const IconHistory = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
     <polyline points="12 6 12 12 16 14" />
   </svg>
 );
 const IconChevronDown = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m6 9 6 6 6-6" />
   </svg>
 );
 const IconCalendarDate = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
     <line x1="16" x2="16" y1="2" y2="6" />
     <line x1="8" x2="8" y1="2" y2="6" />
@@ -91,30 +55,20 @@ const mockRooms = [
   { id_room: 9, nama_room: "Room 9 (PS5)" },
   { id_room: 10, nama_room: "Room 10 (PS5-VIP)" },
 ];
-/**
- * Format JS Date object to "YYYY-MM-DD" string
- * @param {Date} date
- * @returns {string}
- */
+
 const toYYYYMMDD = (date) => {
   const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+  const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 };
 
-/**
- * Format JS Date object to "DD Mon YYYY" string
- * @param {Date} date
- * @returns {string}
- */
-const formatDisplayDate = (date) => {
-  return date.toLocaleDateString("id-ID", {
+const formatDisplayDate = (date) =>
+  date.toLocaleDateString("id-ID", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
-};
 
 function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
   const isEditMode = reservation != null && !isNew;
@@ -134,6 +88,7 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
     duration: reservation?.durasi || 1,
     total_bayar: reservation?.total_harga || 0,
   });
+
   const handleChange = (e) => {
     const { name, value, type } = e.target;
     setFormData((prev) => ({
@@ -141,7 +96,8 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
       [name]: type === "number" ? parseInt(value) || 0 : value,
     }));
   };
-  React.useEffect(() => {
+
+  useEffect(() => {
     if (!reservation) return;
     setFormData((prev) => ({
       ...prev,
@@ -159,8 +115,8 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
     }));
   }, [reservation]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = (e) => {
+    e.preventDefault();
     if (typeof onSave === "function") {
       onSave(formData);
     } else {
@@ -172,15 +128,14 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      {/* Panel Modal */}
-      <div className="bg-white dark:bg-gray-900 w-full max-w-lg p-6 rounded-lg shadow-xl">
-        <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+      <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900">
+        <h3 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">
           {isEditMode ? "Edit Reservasi" : "Tambah Reservasi Baru"}
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Pelanggan
             </label>
             <input
@@ -189,21 +144,19 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
               value={formData.customer_name}
               onChange={handleChange}
               placeholder="Masukkan nama pelanggan"
-              className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-md p-2 
-                focus:ring-blue-500 focus:border-blue-500
-                dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+              className="w-full rounded-md border border-gray-300 bg-gray-50 p-2 text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Ruangan
             </label>
             <select
               name="nama_room"
               value={formData.nama_room}
               onChange={handleChange}
-              className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+              className="w-full rounded-md border border-gray-300 bg-gray-50 p-2 text-gray-900 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
             >
               <option value="" disabled>
                 Pilih Ruangan
@@ -218,7 +171,7 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Tanggal
               </label>
               <input
@@ -226,11 +179,11 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
                 name="date"
                 value={formData.date}
                 onChange={handleChange}
-                className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                className="w-full rounded-md border border-gray-300 bg-gray-50 p-2 text-gray-900 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Waktu Mulai
               </label>
               <input
@@ -238,13 +191,13 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
                 name="time"
                 value={formData.time}
                 onChange={handleChange}
-                className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                className="w-full rounded-md border border-gray-300 bg-gray-50 p-2 text-gray-900 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Durasi (jam)
             </label>
             <input
@@ -253,7 +206,7 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
               value={formData.duration}
               onChange={handleChange}
               min="1"
-              className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+              className="w-full rounded-md border border-gray-300 bg-gray-50 p-2 text-gray-900 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
             />
           </div>
 
@@ -261,13 +214,13 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-md font-medium dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              className="rounded-md bg-gray-100 px-4 py-2 font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-medium"
+              className="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
             >
               Simpan
             </button>
@@ -278,19 +231,17 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
   );
 }
 
-
 function ReservationDetailModal({ isOpen, onClose, reservation, onDelete }) {
+  const navigate = useNavigate();
+
   if (!isOpen || !reservation) return null;
   const start = new Date(reservation.waktu_mulai);
   const end = new Date(reservation.waktu_selesai);
-  const navigate = useNavigate();
-
-  
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-white dark:bg-gray-900 w-full max-w-md p-6 rounded-lg shadow-xl">
-        <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900">
+        <h3 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">
           Detail Reservasi
         </h3>
         <div className="space-y-2 text-sm text-gray-800 dark:text-gray-200">
@@ -315,16 +266,24 @@ function ReservationDetailModal({ isOpen, onClose, reservation, onDelete }) {
             {reservation.payment_status || "-"}
           </div>
         </div>
-        <div className="flex gap-3 mt-4">
+        <div className="mt-4 flex gap-3">
           <button
-            onClick={() => navigate(`/orderfoods?reservation=${reservation.id_reservation}` +
-              `&customer=${encodeURIComponent(reservation.customer_name || "-")}` +
-              `&rooms=${encodeURIComponent(reservation.nama_room || "")}` +
-              `&start=${encodeURIComponent(reservation.waktu_mulai)}` +
-              `&end=${encodeURIComponent(reservation.waktu_selesai || "")}`)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md mr-auto"
+            onClick={() =>
+              navigate(
+                `/orderfoods?reservation=${reservation.id_reservation}` +
+                  `&customer=${encodeURIComponent(
+                    reservation.customer_name || "-"
+                  )}` +
+                  `&room=${encodeURIComponent(reservation.nama_room || "")}` +
+                  `&start=${encodeURIComponent(reservation.waktu_mulai)}` +
+                  `&end=${encodeURIComponent(
+                    reservation.waktu_selesai || ""
+                  )}`
+              )
+            }
+            className="mr-auto inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
           >
-            Order Food{/* <ShoppingCart className="h-5 w-5" /> */}
+            Order Food
           </button>
           <button
             onClick={() => {
@@ -333,13 +292,13 @@ function ReservationDetailModal({ isOpen, onClose, reservation, onDelete }) {
               }
               onClose();
             }}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white font-medium"
+            className="rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700"
           >
             Batalkan Reservasi
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-medium"
+            className="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
           >
             Tutup
           </button>
@@ -348,7 +307,6 @@ function ReservationDetailModal({ isOpen, onClose, reservation, onDelete }) {
     </div>
   );
 }
-
 
 const operationalHours = [
   2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
@@ -363,12 +321,12 @@ function getSlotStatus(room, hour, selectedDateString, reservations) {
       (res.nama_room === "Room 1 (PS4)" && room.id_room === 1) ||
       (res.nama_room === "Room 2 (PS4)" && room.id_room === 2) ||
       (res.nama_room === "Room 3 (PS4)" && room.id_room === 3) ||
-      (res.nama_room === "PS 4 - Room 1" && room.id_room === 1) || // Menangani data mock lama
+      (res.nama_room === "PS 4 - Room 1" && room.id_room === 1) ||
       (res.nama_room === "PS 4 - Room 2" && room.id_room === 2) ||
       (res.nama_room === "PS 4 - Room 3" && room.id_room === 3) ||
       (res.nama_room === "PS 5 - Room 1" && room.id_room === 7) ||
       (res.nama_room === "PS 5 - Room 2" && room.id_room === 8) ||
-      (res.nama_room === "Room 10 (PS5-VIP)" && room.id_room === 10) || // Menangani data mock baru
+      (res.nama_room === "Room 10 (PS5-VIP)" && room.id_room === 10) ||
       (res.nama_room === "PS 5 - VIP Room 1" && room.id_room === 10);
 
     if (isSameRoom && resDate === selectedDateString) {
@@ -376,7 +334,6 @@ function getSlotStatus(room, hour, selectedDateString, reservations) {
       const endHour = new Date(res.waktu_selesai).getHours();
 
       if (hour >= startHour && hour < endHour) {
-        // Show the registrant name on every occupied hour (not only the start)
         return {
           status: "Dibooking",
           text: res.customer_name.split(" ")[0],
@@ -386,12 +343,9 @@ function getSlotStatus(room, hour, selectedDateString, reservations) {
       }
     }
   }
-
-  // 2. Jika tidak, 'Tersedia'
   return { status: "Tersedia", text: "Tersedia", paymentStatus: null };
 }
 
-// Komponen Cell/Slot
 function TimelineSlot({
   room,
   hour,
@@ -401,7 +355,6 @@ function TimelineSlot({
   onBookedClick,
   searchQuery = "",
 }) {
-  // Terima dateString dan reservations sebagai prop
   const { status, text, reservation, paymentStatus } = getSlotStatus(
     room,
     hour,
@@ -417,13 +370,13 @@ function TimelineSlot({
       slotClass +=
         " bg-green-50 text-green-700 dark:bg-green-900/50 dark:text-green-300 opacity-60 hover:opacity-100 hover:bg-green-100 dark:hover:bg-green-800";
       break;
-    case "Dibooking": // Ini untuk kotak yang ada namanya (misal "Andi")
+    case "Dibooking":
       slotClass +=
-        " bg-yellow-100 text-yellow-700 dark:bg-yellow-900/60 dark:text-yellow-300"; // Tetap Kuning
+        " bg-yellow-100 text-yellow-700 dark:bg-yellow-900/60 dark:text-yellow-300";
       break;
-    case "Diisi": // <-- CASE BARU UNTUK KOTAK "Diisi"
+    case "Diisi":
       slotClass +=
-        " bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300"; // Diubah menjadi Merah
+        " bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300";
       break;
     case "Tidak Tersedia":
       slotClass +=
@@ -431,7 +384,6 @@ function TimelineSlot({
       break;
   }
 
-  // If there's a reservation here and it matches the search query, apply a strong orange highlight
   const q = (searchQuery || "").trim().toLowerCase();
   const isSearchMatch =
     reservation &&
@@ -440,7 +392,6 @@ function TimelineSlot({
       (reservation.nama_room || "").toLowerCase().includes(q));
 
   if (isSearchMatch) {
-    // Use the same visual style as a "Dibooking" slot so the highlight matches the small boxes shown in results
     slotClass =
       "h-16 border border-yellow-600 bg-yellow-600 text-white flex flex-col items-center justify-center text-xs p-1 text-center whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer";
   }
@@ -465,11 +416,9 @@ function TimelineSlot({
         if (e.key === "Enter") handleClick();
       }}
     >
-      {/* Primary line: name or status */}
       <div className="font-medium leading-tight">{text}</div>
-      {/* If search matched, show small booking info line */}
       {isSearchMatch && reservation && (
-        <div className="text-[10px] mt-0.5 opacity-90">
+        <div className="mt-0.5 text-[10px] opacity-90">
           {`${reservation.nama_room} • ${new Date(
             reservation.waktu_mulai
           ).getHours()}:00 - ${new Date(
@@ -477,9 +426,8 @@ function TimelineSlot({
           ).getHours()}:00`}
         </div>
       )}
-      {/* Show payment status below name/status text */}
       {paymentStatus && (
-        <div className={`text-[9px] mt-0.5 font-semibold opacity-90`}>
+        <div className="mt-0.5 text-[9px] font-semibold opacity-90">
           {paymentStatus}
         </div>
       )}
@@ -487,7 +435,6 @@ function TimelineSlot({
   );
 }
 
-// Terima prop selectedDateString
 function ReservationTimeline({
   selectedDateString,
   reservations = [],
@@ -496,22 +443,19 @@ function ReservationTimeline({
   searchQuery = "",
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
       <div className="flex">
-        {/* Bagian 1: Sidebar Room (Tidak diubah) */}
-        <div className="w-[20%] min-w-[200px] border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 sticky left-0 z-10">
-          {/* Header Kosong */}
-          <div className="h-10 border-b border-gray-200 dark:border-gray-800 flex items-center p-2">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+        <div className="sticky left-0 z-10 w-[20%] min-w-[200px] border-r border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
+          <div className="flex h-10 items-center border-b border-gray-200 p-2 dark:border-gray-800">
+            <span className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
               Room
             </span>
           </div>
-          {/* Daftar Room */}
           <div>
             {mockRooms.map((room) => (
               <div
                 key={room.id_room}
-                className="h-16 flex items-center px-2 border-b border-gray-200 dark:border-gray-700"
+                className="flex h-16 items-center border-b border-gray-200 px-2 dark:border-gray-700"
               >
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {room.nama_room}
@@ -521,14 +465,12 @@ function ReservationTimeline({
           </div>
         </div>
 
-        {/* Bagian 2: Grid Waktu (Scrollable) (Tidak diubah) */}
         <div className="flex-1 overflow-x-auto">
-          {/* Header Waktu */}
-          <div className="flex sticky top-0 bg-white dark:bg-gray-900 z-0">
+          <div className="sticky top-0 z-0 flex bg-white dark:bg-gray-900">
             {operationalHours.map((hour) => (
               <div
                 key={hour}
-                className="h-10 w-24 shrink-0 border-b border-r border-gray-200 dark:border-gray-800 flex items-center justify-center"
+                className="flex h-10 w-24 shrink-0 items-center justify-center border-b border-r border-gray-200 dark:border-gray-800"
               >
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                   {String(hour).padStart(2, "0")}:00
@@ -537,7 +479,6 @@ function ReservationTimeline({
             ))}
           </div>
 
-          {/* Body Grid */}
           <div
             className="grid"
             style={{
@@ -551,7 +492,7 @@ function ReservationTimeline({
                     key={`${room.id_room}-${hour}`}
                     room={room}
                     hour={hour}
-                    dateString={selectedDateString} // <-- Kirim prop ke slot
+                    dateString={selectedDateString}
                     reservations={reservations}
                     onAvailableClick={onAvailableClick}
                     onBookedClick={onBookedClick}
@@ -567,22 +508,12 @@ function ReservationTimeline({
   );
 }
 
-// --- Komponen Halaman Utama (Sesuai file Anda) ---
-
-/**
- * Format JS Date object to "DD Mon YYYY" string
- * @param {Date} date
- * @returns {string}
- */
-// ... (formatDisplayDate function)
-
-// --- Komponen: History Reservasi (Tabel) ---
 function ReservationHistoryTable({ reservations = [], onDelete }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <thead className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
             <tr>
               <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
                 Pelanggan
@@ -618,14 +549,14 @@ function ReservationHistoryTable({ reservations = [], onDelete }) {
               reservations.map((res) => {
                 const start = new Date(res.waktu_mulai);
                 const end = new Date(res.waktu_selesai);
-                const timeRange = `${start.toLocaleDateString(
-                  "id-ID"
-                )}, ${String(start.getHours()).padStart(2, "0")}:${String(
-                  start.getMinutes()
-                ).padStart(2, "0")} - ${String(end.getHours()).padStart(
+                const timeRange = `${start.toLocaleDateString("id-ID")}, ${String(
+                  start.getHours()
+                ).padStart(2, "0")}:${String(start.getMinutes()).padStart(
                   2,
                   "0"
-                )}:${String(end.getMinutes()).padStart(2, "0")}`;
+                )} - ${String(end.getHours()).padStart(2, "0")}:${String(
+                  end.getMinutes()
+                ).padStart(2, "0")}`;
 
                 let statusBadgeColor =
                   "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
@@ -641,13 +572,13 @@ function ReservationHistoryTable({ reservations = [], onDelete }) {
                     key={res.id_reservation}
                     className="hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
-                    <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
+                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
                       {res.customer_name}
                     </td>
                     <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
                       {res.nama_room}
                     </td>
-                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300 text-xs">
+                    <td className="px-6 py-4 text-xs text-gray-700 dark:text-gray-300">
                       {timeRange}
                     </td>
                     <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
@@ -655,7 +586,7 @@ function ReservationHistoryTable({ reservations = [], onDelete }) {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusBadgeColor}`}
+                        className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeColor}`}
                       >
                         {res.payment_status || "UNPAID"}
                       </span>
@@ -663,7 +594,7 @@ function ReservationHistoryTable({ reservations = [], onDelete }) {
                     <td className="px-6 py-4">
                       <button
                         onClick={() => onDelete && onDelete(res.id_reservation)}
-                        className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium text-red-700 hover:bg-red-50"
+                        className="inline-flex items-center gap-2 rounded-md px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
                         title="Hapus reservasi"
                       >
                         <IconTrash />
@@ -698,6 +629,15 @@ export default function Reservation() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const dateInputRef = useRef(null);
+
+  const today = new Date();
+  const maxDate = new Date();
+  maxDate.setDate(today.getDate() + 2);
+
+  const minDateString = toYYYYMMDD(today);
+  const maxDateString = toYYYYMMDD(maxDate);
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem("rp_search_history");
@@ -706,6 +646,7 @@ export default function Reservation() {
       console.warn("Failed to load search history", e);
     }
   }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem("rp_search_history", JSON.stringify(searchHistory));
@@ -713,6 +654,7 @@ export default function Reservation() {
       console.warn("Failed to save search history", e);
     }
   }, [searchHistory]);
+
   useEffect(() => {
     function onDocClick(e) {
       if (!searchContainerRef.current) return;
@@ -723,20 +665,48 @@ export default function Reservation() {
     document.addEventListener("click", onDocClick);
     return () => document.removeEventListener("click", onDocClick);
   }, []);
+
   useEffect(() => {
     fetchReservationsByDate(selectedDate);
   }, [selectedDate]);
+
   useEffect(() => {
     if (showHistory) {
       fetchReservationHistory();
     }
   }, [showHistory]);
+
+  async function fetchReservationsByDate(dateObj) {
+    const dateStr = toYYYYMMDD(dateObj);
+    try {
+      setLoading(true);
+      setError("");
+      const data = await apiGet(`/reservations?date=${dateStr}`);
+      setReservations(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      setError("Gagal memuat data reservasi.");
+      setReservations([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchReservationHistory() {
+    try {
+      const data = await apiGet("/reservations");
+      setHistoryReservations(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   const addToSearchHistory = (q) => {
     const t = q.trim();
     if (!t) return;
     setSearchHistory((prev) => {
       const without = prev.filter((s) => s.toLowerCase() !== t.toLowerCase());
-      return [t, ...without].slice(0, 10); // keep newest first, max 10
+      return [t, ...without].slice(0, 10);
     });
   };
 
@@ -751,10 +721,8 @@ export default function Reservation() {
   const handleSearchSubmit = (q) => {
     const val = (q || searchQuery || "").trim();
     if (!val) return;
-    // add to history and close dropdown
     addToSearchHistory(val);
     setShowSearchDropdown(false);
-    // keep searchQuery set (so timeline filters)
     setSearchQuery(val);
   };
 
@@ -763,44 +731,6 @@ export default function Reservation() {
     setShowSearchDropdown(false);
   };
 
-  // --- REF BARU untuk input tanggal ---
-  const dateInputRef = useRef(null);
-
-  // --- BATASAN TANGGAL BARU (3 HARI) (Tidak diubah) ---
-  const today = new Date();
-  const maxDate = new Date();
-  maxDate.setDate(today.getDate() + 2); // Hari ini + 2 hari = 3 hari total
-
-  const minDateString = toYYYYMMDD(today);
-  const maxDateString = toYYYYMMDD(maxDate);
-
-  async function fetchReservationsByDate(dateObj) {
-    const dateStr = toYYYYMMDD(dateObj);
-    try {
-      setLoading(true);
-      setError("");
-      const res = await fetch(`${API_BASE}/api/reservations?date=${dateStr}`);
-      if (!res.ok) throw new Error("Failed to load reservations");
-      const data = await res.json();
-      setReservations(data);
-    } catch (e) {
-      console.error(e);
-      setError("Gagal memuat data reservasi.");
-      setReservations([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-  async function fetchReservationHistory() {
-    try {
-      const res = await fetch(`${API_BASE}/api/reservations`);
-      if (!res.ok) throw new Error("Failed to load history");
-      const data = await res.json();
-      setHistoryReservations(data);
-    } catch (e) {
-      console.error(e);
-    }
-  }
   const handleOpenModal = (reservation = null, isNew = false) => {
     setSelectedReservation(reservation);
     setIsModalNew(isNew);
@@ -824,24 +754,10 @@ export default function Reservation() {
     };
     try {
       if (isModalNew || !selectedReservation?.id_reservation) {
-        const res = await fetch(`${API_BASE}/api/reservations`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error("Failed to create");
-        await res.json();
+        await apiPost("/reservations", payload);
       } else {
-        const res = await fetch(
-          `${API_BASE}/api/reservations/${selectedReservation.id_reservation}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          }
-        );
-        if (!res.ok) throw new Error("Failed to update");
-        await res.json();
+        await apiPut(`/reservations/${selectedReservation.id_reservation}`, payload
+);
       }
       await fetchReservationsByDate(selectedDate);
       if (showHistory) {
@@ -868,21 +784,19 @@ export default function Reservation() {
     setIsModalNew(true);
     setIsModalOpen(true);
   };
+
   const handleBookedClick = (reservation) => {
     setSelectedDetailReservation(reservation);
     setIsDetailOpen(true);
   };
+
   const handleDeleteReservation = async (id) => {
     try {
       const ok = window.confirm("Yakin ingin menghapus reservasi ini?");
       if (!ok) return;
 
-      const res = await fetch(`${API_BASE}/api/reservations/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete");
+      await apiDelete(`/reservations/${id}`);
 
-      // buang dari state lokal
       setReservations((prev) => prev.filter((r) => r.id_reservation !== id));
       setHistoryReservations((prev) =>
         prev.filter((r) => r.id_reservation !== id)
@@ -906,6 +820,7 @@ export default function Reservation() {
     const userTimezoneOffset = newDate.getTimezoneOffset() * 60000;
     setSelectedDate(new Date(newDate.getTime() + userTimezoneOffset));
   };
+
   const handleDateButtonClick = () => {
     if (
       dateInputRef.current &&
@@ -914,53 +829,47 @@ export default function Reservation() {
       try {
         dateInputRef.current.showPicker();
       } catch (error) {
-        console.warn(
-          "showPicker() gagal, menggunakan fallback .click()",
-          error
-        );
+        console.warn("showPicker() gagal, menggunakan fallback .click()", error);
         dateInputRef.current.click();
       }
-    } else {
-      if (dateInputRef.current) {
-        dateInputRef.current.click();
-      }
+    } else if (dateInputRef.current) {
+      dateInputRef.current.click();
     }
   };
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
         <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">
           {showHistory ? "History Reservasi" : "Manajemen Reservasi"}
         </h1>
-        <div className="flex gap-2 w-full md:w-auto">
+        <div className="flex w-full gap-2 md:w-auto">
           <button
             onClick={() => setShowHistory(!showHistory)}
-            className="p-2 bg-gray-200 hover:bg-gray-300 rounded-md text-gray-700 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 flex items-center justify-center"
+            className="flex items-center justify-center rounded-md bg-gray-200 p-2 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
             title={showHistory ? "Kembali ke Timeline" : "Lihat History"}
           >
             <IconHistory />
           </button>
           <button
             onClick={() => handleOpenModal(null, true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-medium shadow-lg flex-grow md:flex-grow-0"
+            className="flex-grow rounded-md bg-blue-600 px-4 py-2 font-medium text-white shadow-lg hover:bg-blue-700 md:flex-grow-0"
           >
             + Tambah Reservasi Baru
           </button>
         </div>
       </div>
+
       {showHistory ? (
-        <>
-          <ReservationHistoryTable
-            reservations={historyReservations}
-            onDelete={handleDeleteReservation}
-          />
-        </>
+        <ReservationHistoryTable
+          reservations={historyReservations}
+          onDelete={handleDeleteReservation}
+        />
       ) : (
         <>
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col gap-4 md:flex-row">
             <div className="relative grow" ref={searchContainerRef}>
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                 <IconSearch />
               </span>
               <input
@@ -975,13 +884,11 @@ export default function Reservation() {
                     handleSearchSubmit();
                   }
                 }}
-                className="w-full bg-white border border-gray-300 text-gray-900 rounded-md pl-10 pr-4 py-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-white"
+                className="w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
               />
 
-              {/* Search history dropdown */}
               {showSearchDropdown && (
-                <div className="absolute left-0 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm z-20">
-                  {/* If user has typed a query, show live search results (or "no results" message). Otherwise show history. */}
+                <div className="absolute left-0 z-20 mt-2 w-full rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                   {(() => {
                     const q = (searchQuery || "").trim().toLowerCase();
                     if (q) {
@@ -1001,8 +908,7 @@ export default function Reservation() {
 
                       return (
                         <div className="flex flex-col">
-                          {/* Header di atas hasil pencarian */}
-                          <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200">
+                          <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
                             <div className="font-medium">Hasil Pencarian</div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
                               Menampilkan {matches.length} hasil yang cocok
@@ -1027,10 +933,9 @@ export default function Reservation() {
                                   onClick={() =>
                                     handleSelectSearchHistory(m.customer_name)
                                   }
-                                  className="text-left w-full rounded-md p-2 flex flex-col"
+                                  className="flex w-full flex-col rounded-md p-2 text-left"
                                 >
-                                  {/* Small box that visually matches the slot color */}
-                                  <div className="rounded-md px-3 py-2 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/60 dark:text-yellow-300">
+                                  <div className="rounded-md bg-yellow-100 px-3 py-2 text-yellow-700 dark:bg-yellow-900/60 dark:text-yellow-300">
                                     <div className="font-semibold">
                                       {m.customer_name}
                                     </div>
@@ -1046,7 +951,6 @@ export default function Reservation() {
                       );
                     }
 
-                    // No query: show search history
                     if (searchHistory.length === 0) {
                       return (
                         <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
@@ -1063,7 +967,7 @@ export default function Reservation() {
                             className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700"
                           >
                             <button
-                              className="text-left text-sm text-gray-800 dark:text-gray-100 flex-1"
+                              className="flex-1 text-left text-sm text-gray-800 dark:text-gray-100"
                               onClick={() => handleSelectSearchHistory(h)}
                             >
                               {h}
@@ -1087,50 +991,50 @@ export default function Reservation() {
               )}
             </div>
 
-            {/* Filter 2: Filter Tanggal (DIGANTI MENJADI DINAMIS) */}
             <div className="relative">
-              {/* Bagian Visual (Tombol Palsu) */}
               <button
                 type="button"
-                onClick={handleDateButtonClick} // <-- DIUBAH: Menggunakan handler baru
-                className="flex items-center justify-center gap-2 w-full md:w-auto bg-white border border-gray-300 text-gray-700 rounded-md px-4 py-2 hover:bg-gray-50 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                onClick={handleDateButtonClick}
+                className="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 md:w-auto"
               >
                 <IconCalendarDate />
                 <span>{formatDisplayDate(selectedDate)}</span>
                 <IconChevronDown />
               </button>
 
-              {/* Bagian Fungsional (Input Asli) - TAPI TERSEMBUNYI */}
               <input
                 type="date"
-                ref={dateInputRef} // <-- DIUBAH: Tambahkan ref
+                ref={dateInputRef}
                 value={toYYYYMMDD(selectedDate)}
                 min={minDateString}
                 max={maxDateString}
                 onChange={handleDateChange}
-                // Styling untuk membuatnya transparan DAN MEMINTA DARK MODE
-                style={{ colorScheme: "dark" }} // <-- DIUBAH: Meminta kalender dark mode
-                className="absolute inset-0 w-full h-full opacity-0 pointer-events-none" // <-- DIUBAH: pointer-events-none agar tombol bisa diklik
+                style={{ colorScheme: "dark" }}
+                className="absolute inset-0 h-full w-full opacity-0 pointer-events-none"
                 aria-label="Pilih tanggal"
               />
             </div>
           </div>
 
-          {/* 2. Bagian Bawah: Timeline */}
-          {/* Show all reservations in timeline (no payment status filtering) */}
-          {(() => {
-            return (
-              <ReservationTimeline
-                selectedDateString={toYYYYMMDD(selectedDate)}
-                reservations={reservations}
-                onAvailableClick={handleAvailableClick}
-                onBookedClick={handleBookedClick}
-                searchQuery={searchQuery}
-              />
-            );
-          })()}
+          {error && (
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          )}
+          {loading && !error && (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Memuat data reservasi...
+            </p>
+          )}
+
+          <ReservationTimeline
+            selectedDateString={toYYYYMMDD(selectedDate)}
+            reservations={reservations}
+            onAvailableClick={handleAvailableClick}
+            onBookedClick={handleBookedClick}
+            searchQuery={searchQuery}
+          />
         </>
       )}
+
       <ReservationModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}

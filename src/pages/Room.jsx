@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Pencil, Search, ChevronLeft, ChevronRight } from "lucide-react";
-
-import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api.js"; // pastikan apiPut tersedia
+import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api.js";
 
 const itemMax = 5;
 
