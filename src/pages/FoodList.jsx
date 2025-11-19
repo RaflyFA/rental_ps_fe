@@ -15,10 +15,14 @@ export default function FoodList() {
   const [editingFood, setEditingFood] = useState(null);
   const [form, setForm] = useState({ nama_makanan: "", harga: "" });
   const [formError, setFormError] = useState("");
+  const [notif, setNotif] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState({
     open: false,
     target: null,
   });
+  const showNotif = (msg, type = "success") => {
+    setNotif({ msg, type });
+    setTimeout(() => setNotif(null), 2500);};
   useEffect(() => {
     let alive = true;
     async function fetchFoods() {
@@ -36,7 +40,7 @@ export default function FoodList() {
         setTotalPages(meta?.totalPages ?? 1);
       } catch (err) {
         if (!alive) return;
-        console.error(err);
+        showNotif("Gagal koneksi ke Database");
         const fallback = [
           { id_food: 1, nama_makanan: "Mie Goreng Instan", harga: 12000 },
           { id_food: 2, nama_makanan: "Mie Rebus Instan", harga: 12000 },
@@ -81,9 +85,11 @@ export default function FoodList() {
         setFoods((prev) =>
           prev.map((f) => (f.id_food === updated.id_food ? updated : f))
         );
+        showNotif("Menu berhasil diperbarui!");
       } else {
         await apiPost("/foods", payload);
         setRefreshToken((x) => x + 1);
+        showNotif("Menu berhasil ditambahkan!");
       }
       setOpenForm(false);
       setEditingFood(null);
@@ -96,6 +102,7 @@ export default function FoodList() {
           ? "Gagal menyimpan perubahan. Pastikan backend PUT /foods/:id sudah siap."
           : "Gagal membuat menu. Pastikan backend POST /foods sudah siap."
       );
+      showNotif("Terjadi kesalahan saat menyimpan.", "error");
     }
   }
   async function removeFood(id) {
@@ -104,8 +111,10 @@ export default function FoodList() {
       setFoods((prev) => prev.filter((f) => f.id_food !== id));
       setTotal((t) => Math.max(0, t - 1));
       setRefreshToken((x) => x + 1);
+      showNotif("Menu berhasil dihapus!");
     } catch (err) {
       console.error(err);
+      showNotif("Gagal menghapus menu.", "error");
     }
   }
   const askDeleteFood = (food) => {
@@ -226,29 +235,40 @@ export default function FoodList() {
           </span>{" "}
           menu
         </p>
-        <div className="inline-flex items-center gap-1 self-end md:self-auto">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="text-xs text-gray-600 dark:text-gray-300">
-            Halaman {page} / {safeTotalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() =>
-              setPage((p) => Math.min(safeTotalPages, p + 1))
-            }
-            disabled={page === safeTotalPages}
-            className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+          <div className="inline-flex items-center gap-1 self-end md:self-auto">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 
+                ${page === 1 
+                  ? "bg-indigo-300 text-white cursor-not-allowed" 
+                  : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95"
+                } 
+                dark:bg-indigo-500 dark:hover:bg-indigo-600`}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+              
+            <span className="text-xs text-gray-600 dark:text-gray-300">
+              Halaman {page} / {safeTotalPages}
+            </span>
+              
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(safeTotalPages, p + 1))}
+              disabled={page === safeTotalPages}
+              className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 
+                ${page === safeTotalPages 
+                  ? "bg-indigo-300 text-white cursor-not-allowed" 
+                  : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95"
+                }
+                dark:bg-indigo-500 dark:hover:bg-indigo-600`}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
       </div>
 
       {openForm && (
@@ -336,6 +356,14 @@ export default function FoodList() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {notif && (
+      <div
+          className={`fixed bottom-6 right-6 z-[999] rounded-xl px-4 py-3 text-sm shadow-lg
+            ${notif.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}
+        >
+          {notif.msg}
         </div>
       )}
     </section>

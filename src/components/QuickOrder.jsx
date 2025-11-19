@@ -27,6 +27,10 @@ export default function QuickOrder() {
   const reservationRoom = searchParams.get("room") || "";
   const reservationStart = searchParams.get("start") || "";
   const reservationEnd = searchParams.get("end") || "";
+  const [notif, setNotif] = useState(null);
+  const showNotif = (msg, type = "success") => {
+  setNotif({ msg, type });
+  setTimeout(() => setNotif(null), 2500);};
 
   let reservationTimeText = "";
   if (reservationStart && reservationEnd) {
@@ -131,10 +135,10 @@ export default function QuickOrder() {
     try {
       await apiPost("/order-foods", payload);
       setCart({});
-      alert("Order berhasil dibuat!");
+      showNotif("Order berhasil dibuat!");
     } catch (e) {
       console.error(e);
-      alert("Gagal membuat order. Periksa API backend / jaringan.");
+      showNotif("Gagal membuat order. Periksa koneksi / backend.", "error");
     }
   }
 
@@ -329,6 +333,14 @@ export default function QuickOrder() {
           </div>
         </div>
       </div>
+      {notif && (
+        <div
+          className={`fixed bottom-6 right-6 z-[999] rounded-xl px-4 py-3 text-sm shadow-lg
+            ${notif.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}
+        >
+          {notif.msg}
+        </div>
+      )}
     </div>
   );
 }

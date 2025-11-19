@@ -111,7 +111,6 @@ export default function Room() {
           </colgroup>
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              {/* <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">ID</th> */}
               <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">Nama Ruangan</th>
               <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">Tipe</th>
               <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">Kapasitas</th>
@@ -119,11 +118,9 @@ export default function Room() {
               <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide">Aksi</th>
             </tr>
           </thead>
-
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-900">
             {paginatedRooms.map((room) => (
               <tr key={room.id_room}>
-                {/* <td className="px-4 py-3 text-sm text-gray-500">{room.id_room}</td> */}
                 <td className="px-4 py-3 text-sm font-medium">{room.nama_room}</td>
                 <td className="px-4 py-3 text-sm font-medium">{room.tipe_room}</td>
                 <td className="px-4 py-3 text-sm font-medium">{room.kapasitas}</td>
@@ -172,13 +169,10 @@ export default function Room() {
           </tbody>
         </table>
       </div>
-
-      {/* MODAL CREATE / EDIT */}
       {open && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
             <h2 className="text-lg font-semibold">{editRoom ? "Edit Ruangan" : "Tambah Ruangan"}</h2>
-
             <form className="mt-4 space-y-4" onSubmit={saveRoom}>
               <label className="block">
                 <span className="text-sm">Nama Ruangan</span>
@@ -189,7 +183,6 @@ export default function Room() {
                   className="mt-1 w-full rounded-lg border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 />
               </label>
-
               <label className="block">
                 <span className="text-sm">Tipe Room</span>
                 <select
@@ -203,7 +196,6 @@ export default function Room() {
                   <option value="vip">VIP</option>
                 </select>
               </label>
-
               <label className="block">
                 <span className="text-sm">Kapasitas</span>
                 <input
@@ -213,7 +205,6 @@ export default function Room() {
                   className="mt-1 w-full rounded-lg border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 />
               </label>
-
               <label className="block">
                 <span className="text-sm">Harga / Jam (Rp)</span>
                 <input
@@ -225,7 +216,6 @@ export default function Room() {
                   className="mt-1 w-full rounded-lg border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 />
               </label>
-
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
@@ -234,7 +224,6 @@ export default function Room() {
                 >
                   Batal
                 </button>
-
                 <button
                   type="submit"
                   className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
@@ -246,8 +235,6 @@ export default function Room() {
           </div>
         </div>
       )}
-
-      {/* DELETE CONFIRM */}
       {deleteConfirm.open && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
           <div className="max-w-sm w-full bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-700">
@@ -274,8 +261,6 @@ export default function Room() {
           </div>
         </div>
       )}
-
-      {/* NOTIF */}
       {notif && (
         <div
           className={`
@@ -291,33 +276,38 @@ export default function Room() {
           {notif.msg}
         </div>
       )}
-
-      {/* PAGINATION FOOTER */}
       <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between">
         <p className="text-gray-500 dark:text-gray-400">
           Menampilkan <span className="font-semibold">{from}</span>–<span className="font-semibold text-gray-700 dark:text-gray-200">{to}</span> dari{" "}
           <span className="font-semibold text-gray-700 dark:text-gray-200">{filtered.length}</span> ruangan
         </p>
-
-        <div className="inline-flex items-center gap-1 self-end md:self-auto">
+        <div className="inline-flex items-center gap-2">
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2
+              ${currentPage === 1 
+                ? "bg-indigo-300 text-white cursor-not-allowed"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95"
+              }
+            `}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-
           <span className="text-xs text-gray-600 dark:text-gray-300">
             Halaman {currentPage} / {pageCount}
           </span>
-
           <button
             type="button"
             onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
             disabled={currentPage === pageCount}
-            className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2
+              ${currentPage === pageCount
+                ? "bg-indigo-300 text-white cursor-not-allowed"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95"
+              }
+            `}
           >
             <ChevronRight className="h-4 w-4" />
           </button>

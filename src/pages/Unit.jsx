@@ -22,16 +22,12 @@ export default function Unit() {
 
   const [notif, setNotif] = useState(null);
 
-  const [page, setPage] = useState(1); // pagination
+  const [page, setPage] = useState(1);
 
   const showNotif = (msg, type = "success") => {
     setNotif({ msg, type });
     setTimeout(() => setNotif(null), 2500);
   };
-
-  // =============================
-  // LOAD DATA
-  // =============================
   useEffect(() => {
     fetchUnits();
     fetchRooms();
@@ -54,8 +50,6 @@ export default function Unit() {
       showNotif("Gagal memuat room", "error");
     }
   };
-
-  // reset halaman ketika search berubah
   useEffect(() => {
     setPage(1);
   }, [query]);
@@ -139,12 +133,9 @@ export default function Unit() {
 
   return (
     <section className="space-y-6">
-      {/* HEADER */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight">List Unit</h1>
-
         <div className="flex items-center gap-2">
-          {/* SEARCH */}
           <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <Search className="h-5 w-5 text-gray-400" />
             <input
@@ -154,8 +145,6 @@ export default function Unit() {
               className="w-56 bg-transparent text-sm outline-none placeholder:text-gray-400"
             />
           </div>
-
-          {/* ADD BUTTON */}
           <button
             onClick={() => {
               setNewUnit({ id: null, unit: "", room: "", description: "" });
@@ -167,8 +156,6 @@ export default function Unit() {
           </button>
         </div>
       </div>
-
-      {/* TABLE */}
       <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-800">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-900">
@@ -190,7 +177,6 @@ export default function Unit() {
               </th>
             </tr>
           </thead>
-
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-900">
             {paginatedUnits.map((u, index) => (
               <tr key={u.id_unit}>
@@ -229,8 +215,6 @@ export default function Unit() {
           </tbody>
         </table>
       </div>
-
-      {/* PAGINATION (PERSIS FOODLIST) */}
       <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between">
         <p className="text-gray-500 dark:text-gray-400">
           Menampilkan <span className="font-semibold">{from}</span>–
@@ -263,7 +247,6 @@ export default function Unit() {
         </div>
       </div>
 
-      {/* MODAL CREATE / EDIT */}
       {open && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
@@ -272,7 +255,6 @@ export default function Unit() {
             </h2>
 
             <form className="mt-4 space-y-4">
-              {/* Nama Unit */}
               <label className="block">
                 <span className="text-sm">Nama Unit</span>
                 <input
@@ -282,7 +264,6 @@ export default function Unit() {
                 />
               </label>
 
-              {/* Room */}
               <label className="block">
                 <span className="text-sm">Nama Room</span>
                 <select
@@ -300,7 +281,6 @@ export default function Unit() {
                 </select>
               </label>
 
-              {/* Deskripsi */}
               <label className="block">
                 <span className="text-sm">Deskripsi</span>
                 <input
@@ -334,7 +314,6 @@ export default function Unit() {
         </div>
       )}
 
-      {/* DELETE CONFIRM */}
       {deleteConfirm.open && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
           <div className="max-w-sm w-full bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-700">
@@ -362,7 +341,6 @@ export default function Unit() {
         </div>
       )}
 
-      {/* NOTIF */}
       {notif && (
         <div
           className={`

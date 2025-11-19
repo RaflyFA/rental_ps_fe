@@ -16,7 +16,6 @@ import Logo from "./Logo";
 import { useAuthStore } from "../store/useAuthStore";
 
 const nav = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/reservation", label: "Reservation", icon: CalendarRange },
   { to: "/games", label: "List Game", icon: Gamepad },
   { to: "/unit", label: "Unit Playstation", icon: Monitor },
@@ -24,8 +23,7 @@ const nav = [
   { to: "/rooms", label: "Room", icon: DoorOpen },
   { to: "/customer", label: "Customer", icon: SquareUserRound },
   { to: "/membership", label: "Membership", icon: IdCard },
-  { to: "/user", label: "User", icon: User },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/user", label: "User", icon: User }
 ];
 
 function Item(props) {
