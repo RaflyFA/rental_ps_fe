@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api";
 
@@ -43,7 +43,7 @@ export default function Users() {
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", role: "staff" });
+  const [form, setForm] = useState({ name: "", role: "Staff" });
 
   const [showDelete, setShowDelete] = useState(false);
   const [toDelete, setToDelete] = useState(null);
@@ -84,7 +84,7 @@ export default function Users() {
   }, [page, query]);
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", role: "staff" });
+    setForm({ name: "", role: "Staff" });
     setShowModal(true);
   }
 
@@ -191,16 +191,16 @@ export default function Users() {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
                 No
               </th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
                 Nama
               </th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
                 Jabatan
               </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide">
                 Aksi
               </th>
             </tr>
@@ -233,14 +233,14 @@ export default function Users() {
                 key={u.id}
                 className="hover:bg-gray-50 dark:hover:bg-gray-800/60"
               >
-                <td className="px-4 py-3 text-sm text-gray-500">
+                <td className="px-4 py-3 text-sm">
                   {(meta.page - 1) * meta.limit + idx + 1}
                 </td>
-                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                <td className="px-4 py-3 text-sm">
                   {u.name}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                  {u.role === "owner" ? "Owner" : "Staff Pegawai"}
+                <td className="px-4 py-3 text-sm">
+                  {u.role === "Owner" ? "Owner" : "Staff"}
                 </td>
                 <td className="space-x-2 px-4 py-3 text-center">
                   <button
@@ -317,8 +317,8 @@ export default function Users() {
             onChange={(e) => setForm({ ...form, role: e.target.value })}
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
           >
-            <option value="owner">Owner</option>
-            <option value="staff">Staff Pegawai</option>
+            <option value="Owner">Owner</option>
+            <option value="Staff">Staff</option>
           </select>
           <div className="mt-4 flex justify-end gap-2">
             <button
