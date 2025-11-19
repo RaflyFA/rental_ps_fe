@@ -407,7 +407,7 @@ export default function Customer() {
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-red-600">Hapus Customer</h2>
+              <h2 className="text-lg font-semibold">Hapus Customer?</h2>
               <button
                 type="button"
                 onClick={closeConfirmModal}
