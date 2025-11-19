@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api";
+import moment from "moment";
 
 const IconTrash = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -43,19 +44,6 @@ const IconCalendarDate = () => (
   </svg>
 );
 
-const mockRooms = [
-  { id_room: 1, nama_room: "Room 1 (PS4)" },
-  { id_room: 2, nama_room: "Room 2 (PS4)" },
-  { id_room: 3, nama_room: "Room 3 (PS4)" },
-  { id_room: 4, nama_room: "Room 4 (PS4)" },
-  { id_room: 5, nama_room: "Room 5 (PS4)" },
-  { id_room: 6, nama_room: "Room 6 (PS4)" },
-  { id_room: 7, nama_room: "Room 7 (PS5)" },
-  { id_room: 8, nama_room: "Room 8 (PS5)" },
-  { id_room: 9, nama_room: "Room 9 (PS5)" },
-  { id_room: 10, nama_room: "Room 10 (PS5-VIP)" },
-];
-
 const toYYYYMMDD = (date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -70,60 +58,252 @@ const formatDisplayDate = (date) =>
     year: "numeric",
   });
 
-function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
-  const isEditMode = reservation != null && !isNew;
-  const [formData, setFormData] = useState({
-    customer_name: reservation?.customer_name || "",
-    nama_room: reservation?.nama_room || "",
-    date: reservation
-      ? reservation.waktu_mulai
-        ? reservation.waktu_mulai.split("T")[0]
-        : reservation.date || toYYYYMMDD(new Date())
-      : toYYYYMMDD(new Date()),
-    time: reservation
-      ? reservation.waktu_mulai
-        ? reservation.waktu_mulai.split("T")[1].substring(0, 5)
-        : reservation.time || "12:00"
-      : "12:00",
-    duration: reservation?.durasi || 1,
-    total_bayar: reservation?.total_harga || 0,
+const normalizeRoomIdValue = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = Number(value);
+  return Number.isNaN(numeric) ? null : numeric;
+};
+
+const normalizeRoomId = (room) => {
+  if (!room) return null;
+  return normalizeRoomIdValue(room.id_room ?? room.id);
+};
+
+const normalizeRoomNameKey = (roomOrName) => {
+  if (!roomOrName) return "";
+  if (typeof roomOrName === "string") {
+    return roomOrName.trim().toLowerCase();
+  }
+  return (roomOrName.nama_room ?? roomOrName.name ?? "")
+    .trim()
+    .toLowerCase();
+};
+
+const buildRoomLookup = (rooms = []) => {
+  const byId = new Map();
+  const byName = new Map();
+  rooms.forEach((room) => {
+    const id = normalizeRoomId(room);
+    if (id !== null) {
+      byId.set(id, room);
+    }
+    const nameKey = normalizeRoomNameKey(room);
+    if (nameKey) {
+      byName.set(nameKey, room);
+    }
   });
+  return { byId, byName };
+};
+
+const normalizeReservationRoom = (reservation, roomLookup) => {
+  if (!reservation) return reservation;
+  const normalized = { ...reservation };
+  const rawRoomId =
+    reservation.room_id ??
+    reservation.id_room ??
+    reservation.room?.id ??
+    null;
+  const resolvedRoomId = normalizeRoomIdValue(rawRoomId);
+  let matchedRoom =
+    resolvedRoomId !== null ? roomLookup.byId.get(resolvedRoomId) : null;
+  if (!matchedRoom) {
+    const nameKey = normalizeRoomNameKey(
+      reservation.nama_room ?? reservation.room?.name ?? "",
+    );
+    if (nameKey && roomLookup.byName.has(nameKey)) {
+      matchedRoom = roomLookup.byName.get(nameKey);
+    }
+  }
+  if (matchedRoom) {
+    normalized.room_id = normalizeRoomId(matchedRoom);
+    normalized.nama_room =
+      matchedRoom.nama_room ??
+      matchedRoom.name ??
+      normalized.nama_room ??
+      "";
+  } else {
+    normalized.room_id = resolvedRoomId;
+    normalized.nama_room =
+      normalized.nama_room ?? reservation.room?.name ?? "";
+  }
+  return normalized;
+};
+
+const extractHourFromString = (value) => {
+  if (!value) return null;
+  const str = value?.toString?.() ?? "";
+  const hasDateTime = str.includes("T");
+  const parser = hasDateTime
+    ? moment.utc(str)
+    : moment.utc(str, "HH:mm");
+  if (parser.isValid()) {
+    return parser.hour();
+  }
+  const hour = parseInt(str.split(":")[0], 10);
+  return Number.isNaN(hour) ? null : hour;
+};
+
+const deriveReservationHours = (reservation) => {
+  const startHour = moment(reservation.waktu_mulai).format("H");
+
+  let endHour = moment(reservation.waktu_selesai).format("H");
+
+  const duration =
+    parseInt(
+      reservation.duration ??
+        reservation.durasi ??
+        reservation.jumlah_jam ??
+        1,
+      10,
+    ) || 1;
+
+  if (startHour !== null && endHour === null) {
+    endHour = startHour + duration;
+  }
+
+  return {
+    startHour,
+    endHour,
+  };
+};
+
+const buildReservationFormData = (reservation) => {
+  const now = new Date();
+  const fallbackDate = toYYYYMMDD(now);
+  const fallbackTime = `${String(now.getHours()).padStart(2, "0")}:${String(
+    now.getMinutes(),
+  ).padStart(2, "0")}`;
+  const waktuMulai = reservation?.waktu_mulai ?? null;
+  const derivedDate = waktuMulai
+    ? waktuMulai.split("T")[0]
+    : reservation?.date ?? fallbackDate;
+  const derivedTime = waktuMulai
+    ? waktuMulai.split("T")[1].substring(0, 5)
+    : reservation?.time ?? fallbackTime;
+
+  return {
+    customer_id: reservation?.customer_id ?? null,
+    customer_name: reservation?.customer_name ?? "",
+    room_id: reservation?.room_id ?? reservation?.id_room ?? null,
+    nama_room: reservation?.nama_room ?? "",
+    date: derivedDate,
+    time: derivedTime,
+    duration: reservation?.durasi ?? reservation?.duration ?? 1,
+    payment_method: reservation?.payment_method ?? "Cash",
+    total_bayar: reservation?.total_harga ?? reservation?.total_bayar ?? 0,
+  };
+};
+
+function ReservationModal({
+  isOpen,
+  onClose,
+  reservation,
+  onSave,
+  isNew,
+  rooms = [],
+  roomsLoading = false,
+  customers = [],
+  customersLoading = false,
+  customersError = "",
+  fetchReservations
+}) {
+  const isEditMode = reservation != null && !isNew;
+  const [formData, setFormData] = useState(() => buildReservationFormData(reservation));
+  const [customerQuery, setCustomerQuery] = useState(reservation?.customer_name ?? "");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const customerFieldRef = useRef(null);
+
+  useEffect(() => {
+    setFormData(buildReservationFormData(reservation));
+    setCustomerQuery(reservation?.customer_name ?? "");
+  }, [reservation, isOpen]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (!customerFieldRef.current) return;
+      if (!customerFieldRef.current.contains(event.target)) {
+        setShowCustomerDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredCustomers = useMemo(() => {
+    if (!Array.isArray(customers)) return [];
+    const query = customerQuery.trim().toLowerCase();
+    const baseList = query
+      ? customers.filter((cust) => cust.nama?.toLowerCase().includes(query))
+      : customers;
+    return baseList.slice(0, 10);
+  }, [customerQuery, customers]);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "number" ? parseInt(value) || 0 : value,
+      [name]: type === "number" ? parseInt(value, 10) || 0 : value,
     }));
   };
 
-  useEffect(() => {
-    if (!reservation) return;
+  const handleRoomChange = (e) => {
+    const selectedId = e.target.value ? Number(e.target.value) : null;
+    const room = rooms.find((r) => r.id_room === selectedId);
     setFormData((prev) => ({
       ...prev,
-      customer_name: reservation.customer_name || prev.customer_name,
-      nama_room: reservation.nama_room || prev.nama_room,
-      date: reservation.waktu_mulai
-        ? reservation.waktu_mulai.split("T")[0]
-        : reservation.date || prev.date,
-      time: reservation.waktu_mulai
-        ? reservation.waktu_mulai.split("T")[1].substring(0, 5)
-        : reservation.time || prev.time,
-      duration: reservation.durasi || reservation.duration || prev.duration,
-      payment_method: reservation.payment_method || prev.payment_method,
-      total_bayar: reservation.total_harga || prev.total_bayar,
+      room_id: room?.id_room ?? null,
+      nama_room: room?.nama_room ?? "",
     }));
-  }, [reservation]);
+  };
 
-  const handleSubmit = (e) => {
+  const handleCustomerInputChange = (e) => {
+    const value = e.target.value;
+    setCustomerQuery(value);
+    setFormData((prev) => ({
+      ...prev,
+      customer_name: value,
+      customer_id: null,
+    }));
+    setShowCustomerDropdown(true);
+  };
+
+  const handleCustomerSelect = (customer) => {
+    setFormData((prev) => ({
+      ...prev,
+      customer_id: customer.id_customer,
+      customer_name: customer.nama,
+    }));
+    setCustomerQuery(customer.nama);
+    setShowCustomerDropdown(false);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.customer_id) {
+      alert("Pilih pelanggan dari daftar.");
+      return;
+    }
+    if (!formData.room_id) {
+      alert("Pilih ruangan untuk reservasi.");
+      return;
+    }
     if (typeof onSave === "function") {
-      onSave(formData);
+      await onSave(formData);
     } else {
       console.log("Form Data Disimpan (onSave not provided):", formData);
+      onClose();
     }
-    onClose();
   };
+
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   if (typeof onSave === "function") {
+  //     onSave(formData);
+  //   } else {
+  //     console.log("Form Data Disimpan (onSave not provided):", formData);
+  //   }
+  //   onClose();
+  // };
 
   if (!isOpen) return null;
   return (
@@ -134,18 +314,60 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div ref={customerFieldRef} className="relative">
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Pelanggan
             </label>
             <input
               type="text"
-              name="customer_name"
-              value={formData.customer_name}
-              onChange={handleChange}
-              placeholder="Masukkan nama pelanggan"
-              className="w-full rounded-md border border-gray-300 bg-gray-50 p-2 text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              value={customerQuery}
+              onChange={handleCustomerInputChange}
+              onFocus={() => setShowCustomerDropdown(true)}
+              placeholder={
+                customersLoading ? "Memuat daftar pelanggan..." : "Cari nama pelanggan"
+              }
+              disabled={customersLoading && customers.length === 0}
+              className="w-full rounded-md border border-gray-300 bg-gray-50 p-2 text-gray-900 focus:border-blue-500 focus:ring-blue-500 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-white"
             />
+            {customersError && (
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{customersError}</p>
+            )}
+            {showCustomerDropdown && (
+              <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                {customersLoading ? (
+                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-300">
+                    Memuat data pelanggan...
+                  </div>
+                ) : filteredCustomers.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-300">
+                    Tidak ada pelanggan
+                  </div>
+                ) : (
+                  filteredCustomers.map((customer) => (
+                    <button
+                      type="button"
+                      key={customer.id_customer}
+                      onClick={() => handleCustomerSelect(customer)}
+                      className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {customer.nama}
+                      </span>
+                      {customer.no_hp && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {customer.no_hp}
+                        </span>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+            {formData.customer_id && (
+              <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+                Pelanggan dipilih: {formData.customer_name}
+              </p>
+            )}
           </div>
 
           <div>
@@ -153,16 +375,21 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
               Ruangan
             </label>
             <select
-              name="nama_room"
-              value={formData.nama_room}
-              onChange={handleChange}
-              className="w-full rounded-md border border-gray-300 bg-gray-50 p-2 text-gray-900 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              name="room_id"
+              value={formData.room_id ?? ""}
+              onChange={handleRoomChange}
+              disabled={roomsLoading && rooms.length === 0}
+              className="w-full rounded-md border border-gray-300 bg-gray-50 p-2 text-gray-900 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:cursor-not-allowed"
             >
-              <option value="" disabled>
-                Pilih Ruangan
+              <option value="" disabled={roomsLoading || rooms.length === 0}>
+                {roomsLoading
+                  ? "Memuat daftar ruangan..."
+                  : rooms.length === 0
+                    ? "Tidak ada ruangan"
+                    : "Pilih Ruangan"}
               </option>
-              {mockRooms.map((r) => (
-                <option key={r.id_room} value={r.nama_room}>
+              {rooms.map((r) => (
+                <option key={r.id_room} value={r.id_room}>
                   {r.nama_room}
                 </option>
               ))}
@@ -231,16 +458,23 @@ function ReservationModal({ isOpen, onClose, reservation, onSave, isNew }) {
   );
 }
 
-function ReservationDetailModal({ isOpen, onClose, reservation, onDelete }) {
+function ReservationDetailModal({ isOpen, onClose, reservation, onDelete, fetchReservations }) {
   const navigate = useNavigate();
 
   if (!isOpen || !reservation) return null;
   const start = new Date(reservation.waktu_mulai);
   const end = new Date(reservation.waktu_selesai);
-
+  console.log("Detail Reservation:", reservation);
+  const handlePayment = async () => { 
+    const response = await apiPost(`/reservations/pay/${reservation.id_reservation}`, { reservation_id: reservation.id_reservation });
+    if(response){
+        onClose();
+        fetchReservations();
+      }
+    }
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900">
+    <div className="fixed  inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="  w-full max-w-xl rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900">
         <h3 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">
           Detail Reservasi
         </h3>
@@ -263,24 +497,38 @@ function ReservationDetailModal({ isOpen, onClose, reservation, onDelete }) {
           </div>
           <div>
             <strong>Status Pembayaran:</strong>{" "}
-            {reservation.payment_status || "-"}
+            {reservation.payment_status ? "Lunas" : "Belum Dibayar"}
+          </div>
+          <div>
+            <strong>Metode Pembayaran:</strong>{" "}
+            {reservation.payment_method || "Belum Ditentukan"}
           </div>
         </div>
         <div className="mt-4 flex gap-3">
+          {!reservation.payment_status && <button
+            onClick={handlePayment}
+            className="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+          >
+            Sudah Dibayar
+          </button>}
           <button
-            onClick={() =>
+            onClick={() => {
+              const startTime = reservation.waktu_mulai
+                ? moment(reservation.waktu_mulai).format()
+                : "";
+              const endTime = reservation.waktu_selesai
+                ? moment(reservation.waktu_selesai).format()
+                : "";
               navigate(
                 `/orderfoods?reservation=${reservation.id_reservation}` +
                   `&customer=${encodeURIComponent(
                     reservation.customer_name || "-"
                   )}` +
                   `&room=${encodeURIComponent(reservation.nama_room || "")}` +
-                  `&start=${encodeURIComponent(reservation.waktu_mulai)}` +
-                  `&end=${encodeURIComponent(
-                    reservation.waktu_selesai || ""
-                  )}`
-              )
-            }
+                  `&start=${encodeURIComponent(startTime)}` +
+                  `&end=${encodeURIComponent(endTime)}`
+              );
+            }}
             className="mr-auto inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
           >
             Order Food
@@ -302,6 +550,7 @@ function ReservationDetailModal({ isOpen, onClose, reservation, onDelete }) {
           >
             Tutup
           </button>
+          
         </div>
       </div>
     </div>
@@ -314,33 +563,36 @@ const operationalHours = [
 ];
 
 function getSlotStatus(room, hour, selectedDateString, reservations) {
+  const timelineRoomId = normalizeRoomId(room);
+
   for (const res of reservations) {
-    const resDate = res.waktu_mulai.split("T")[0];
-    const isSameRoom =
-      res.nama_room === room.nama_room ||
-      (res.nama_room === "Room 1 (PS4)" && room.id_room === 1) ||
-      (res.nama_room === "Room 2 (PS4)" && room.id_room === 2) ||
-      (res.nama_room === "Room 3 (PS4)" && room.id_room === 3) ||
-      (res.nama_room === "PS 4 - Room 1" && room.id_room === 1) ||
-      (res.nama_room === "PS 4 - Room 2" && room.id_room === 2) ||
-      (res.nama_room === "PS 4 - Room 3" && room.id_room === 3) ||
-      (res.nama_room === "PS 5 - Room 1" && room.id_room === 7) ||
-      (res.nama_room === "PS 5 - Room 2" && room.id_room === 8) ||
-      (res.nama_room === "Room 10 (PS5-VIP)" && room.id_room === 10) ||
-      (res.nama_room === "PS 5 - VIP Room 1" && room.id_room === 10);
+    const resDate = res.waktu_mulai
+    ? moment.utc(res.waktu_mulai).local().format("YYYY-MM-DD")
+    : res.date ?? null;
+    if (!resDate || resDate !== selectedDateString) continue;
 
-    if (isSameRoom && resDate === selectedDateString) {
-      const startHour = new Date(res.waktu_mulai).getHours();
-      const endHour = new Date(res.waktu_selesai).getHours();
+    const reservationRoomId = normalizeRoomIdValue(
+      res.room_id ?? res.id_room ?? res.room?.id,
+    );
 
-      if (hour >= startHour && hour < endHour) {
-        return {
-          status: "Dibooking",
-          text: res.customer_name.split(" ")[0],
-          reservation: res,
-          paymentStatus: res.payment_status || "UNPAID",
-        };
-      }
+    if (
+      timelineRoomId === null ||
+      reservationRoomId === null ||
+      timelineRoomId !== reservationRoomId
+    ) {
+      continue;
+    }
+
+    const { startHour, endHour } = deriveReservationHours(res);
+    if (startHour === null || endHour === null) continue;
+
+    if (hour >= startHour && hour < endHour) {
+      return {
+        status: "Dibooking",
+        text: (res.customer_name || "").split(" ")[0] || "Dibooking",
+        reservation: res,
+        paymentStatus: res.payment_status || "UNPAID",
+      };
     }
   }
   return { status: "Tersedia", text: "Tersedia", paymentStatus: null };
@@ -441,7 +693,25 @@ function ReservationTimeline({
   onAvailableClick,
   onBookedClick,
   searchQuery = "",
+  rooms = [],
+  roomsLoading = false,
 }) {
+  if (roomsLoading) {
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-600 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+        Memuat data ruangan...
+      </div>
+    );
+  }
+
+  if (!roomsLoading && rooms.length === 0) {
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-600 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+        Tidak ada data ruangan.
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
       <div className="flex">
@@ -452,7 +722,7 @@ function ReservationTimeline({
             </span>
           </div>
           <div>
-            {mockRooms.map((room) => (
+            {rooms.map((room) => (
               <div
                 key={room.id_room}
                 className="flex h-16 items-center border-b border-gray-200 px-2 dark:border-gray-700"
@@ -485,7 +755,7 @@ function ReservationTimeline({
               gridTemplateColumns: `repeat(${operationalHours.length}, 6rem)`,
             }}
           >
-            {mockRooms.map((room) => (
+            {rooms.map((room) => (
               <React.Fragment key={room.id_room}>
                 {operationalHours.map((hour) => (
                   <TimelineSlot
@@ -628,6 +898,25 @@ export default function Reservation() {
   const [historyReservations, setHistoryReservations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [customers, setCustomers] = useState([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [customersError, setCustomersError] = useState("");
+  const [rooms, setRooms] = useState([]);
+  const [roomsLoading, setRoomsLoading] = useState(false);
+  const [roomsError, setRoomsError] = useState("");
+
+  const roomLookup = useMemo(() => buildRoomLookup(rooms), [rooms]);
+  const normalizedReservations = useMemo(
+    () => reservations.map((res) => normalizeReservationRoom(res, roomLookup)),
+    [reservations, roomLookup],
+  );
+  const normalizedHistoryReservations = useMemo(
+    () =>
+      historyReservations.map((res) =>
+        normalizeReservationRoom(res, roomLookup),
+      ),
+    [historyReservations, roomLookup],
+  );
 
   const dateInputRef = useRef(null);
 
@@ -671,10 +960,54 @@ export default function Reservation() {
   }, [selectedDate]);
 
   useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  useEffect(() => {
     if (showHistory) {
       fetchReservationHistory();
     }
   }, [showHistory]);
+
+  async function fetchRooms() {
+    try {
+      setRoomsLoading(true);
+      setRoomsError("");
+      const data = await apiGet("/rooms");
+      const list = Array.isArray(data) ? data : data?.data ?? [];
+      setRooms(list);
+    } catch (e) {
+      console.error(e);
+      setRooms([]);
+      setRoomsError("Gagal memuat data ruangan.");
+    } finally {
+      setRoomsLoading(false);
+    }
+  }
+
+  async function fetchCustomers() {
+    try {
+      setCustomersLoading(true);
+      setCustomersError("");
+      const payload = await apiGet("/customer?all=true");
+      const list = Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload)
+          ? payload
+          : [];
+      setCustomers(list);
+    } catch (e) {
+      console.error(e);
+      setCustomers([]);
+      setCustomersError("Gagal memuat data pelanggan.");
+    } finally {
+      setCustomersLoading(false);
+    }
+  }
 
   async function fetchReservationsByDate(dateObj) {
     const dateStr = toYYYYMMDD(dateObj);
@@ -744,8 +1077,18 @@ export default function Reservation() {
   };
 
   const handleSaveReservation = async (formData) => {
+    if (!formData?.customer_id) {
+      alert("Pilih pelanggan terlebih dahulu.");
+      return;
+    }
+    if (!formData?.room_id) {
+      alert("Pilih ruangan terlebih dahulu.");
+      return;
+    }
     const payload = {
+      customer_id: formData.customer_id,
       customer_name: formData.customer_name,
+      room_id: formData.room_id,
       nama_room: formData.nama_room,
       date: formData.date,
       time: formData.time,
@@ -772,7 +1115,10 @@ export default function Reservation() {
 
   const handleAvailableClick = ({ room, hour, dateString }) => {
     const prefill = {
+      customer_id: null,
       customer_name: "",
+      room_id: room.id_room,
+      id_room: room.id_room,
       nama_room: room.nama_room,
       date: dateString,
       time: `${String(hour).padStart(2, "0")}:00`,
@@ -809,6 +1155,8 @@ export default function Reservation() {
         setIsDetailOpen(false);
         setSelectedDetailReservation(null);
       }
+
+      fetchReservationsByDate(selectedDate);
     } catch (e) {
       console.error(e);
       alert("Gagal menghapus reservasi.");
@@ -862,7 +1210,7 @@ export default function Reservation() {
 
       {showHistory ? (
         <ReservationHistoryTable
-          reservations={historyReservations}
+          reservations={normalizedHistoryReservations}
           onDelete={handleDeleteReservation}
         />
       ) : (
@@ -892,7 +1240,7 @@ export default function Reservation() {
                   {(() => {
                     const q = (searchQuery || "").trim().toLowerCase();
                     if (q) {
-                      const matches = reservations.filter((r) => {
+                      const matches = normalizedReservations.filter((r) => {
                         const name = (r.customer_name || "").toLowerCase();
                         const room = (r.nama_room || "").toLowerCase();
                         return name.includes(q) || room.includes(q);
@@ -1024,13 +1372,18 @@ export default function Reservation() {
               Memuat data reservasi...
             </p>
           )}
+          {roomsError && (
+            <p className="text-sm text-red-600 dark:text-red-400">{roomsError}</p>
+          )}
 
           <ReservationTimeline
             selectedDateString={toYYYYMMDD(selectedDate)}
-            reservations={reservations}
+            reservations={normalizedReservations}
             onAvailableClick={handleAvailableClick}
             onBookedClick={handleBookedClick}
             searchQuery={searchQuery}
+            rooms={rooms}
+            roomsLoading={roomsLoading}
           />
         </>
       )}
@@ -1041,9 +1394,16 @@ export default function Reservation() {
         reservation={selectedReservation}
         isNew={isModalNew}
         onSave={handleSaveReservation}
+        rooms={rooms}
+        roomsLoading={roomsLoading}
+        customers={customers}
+        customersLoading={customersLoading}
+        customersError={customersError}
+        fetchReservations={() => fetchReservationsByDate(selectedDate)}
       />
       <ReservationDetailModal
         isOpen={isDetailOpen}
+        fetchReservations={() => fetchReservationsByDate(selectedDate)}
         onClose={() => setIsDetailOpen(false)}
         reservation={selectedDetailReservation}
         onDelete={handleDeleteReservation}

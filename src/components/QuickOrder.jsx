@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Minus, ShoppingCart, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { apiGet, apiPost } from "../lib/api";
+import moment from "moment";
 
 const PAGE_SIZE = 9;
 
@@ -29,21 +30,12 @@ export default function QuickOrder() {
 
   let reservationTimeText = "";
   if (reservationStart && reservationEnd) {
-    const start = new Date(reservationStart);
-    const end = new Date(reservationEnd);
-    const dateText = start.toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-    const startText = start.toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const endText = end.toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    console.log(new Date(reservationStart), reservationStart);
+    const start = moment.utc(reservationStart).local();
+    const end = moment.utc(reservationEnd).local();
+    const dateText = start.format("DD MMM YYYY");
+    const startText = start.format("HH:mm");
+    const endText = end.format("HH:mm");
     reservationTimeText = `${dateText} • ${startText} - ${endText}`;
   }
 
