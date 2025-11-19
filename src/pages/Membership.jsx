@@ -7,6 +7,7 @@ export default function Membership() {
   const [loadingMemberships, setLoadingMemberships] = useState(false);
   const [query, setQuery] = useState("");
   const [modalState, setModalState] = useState({ open: false, mode: "create" });
+  const [notif, setNotif] = useState(null);
   const [formData, setFormData] = useState({
     id_membership: null,
     nama_tier: "",
@@ -15,7 +16,10 @@ export default function Membership() {
   });
   const [confirmDelete, setConfirmDelete] = useState({ open: false, target: null });
   const hasFetchedRef = useRef(false);
-
+  const showNotif = (msg, type = "success") => {
+    setNotif({ msg, type });
+    setTimeout(() => setNotif(null), 2500);
+  };
   const filtered = useMemo(() => {
     return memberships.filter((item) => item.nama_tier.toLowerCase().includes(query.toLowerCase()));
   }, [memberships, query]);
@@ -72,16 +76,19 @@ export default function Membership() {
 
   const handleCreateMembership = async (payload) => {
     await apiPost("/membership", buildPayload(payload));
+    showNotif("Tier membership berhasil ditambahkan");
     await fetchMemberships();
   };
 
   const handleUpdateMembership = async (id, payload) => {
     await apiPut(`/membership/${id}`, buildPayload(payload));
+    showNotif("Tier membership berhasil diperbarui");
     await fetchMemberships();
   };
 
   const handleDeleteMembership = async (id) => {
     await apiDelete(`/membership/${id}`);
+    showNotif("Tier membership berhasil dihapus");
     await fetchMemberships();
   };
 
@@ -117,6 +124,7 @@ export default function Membership() {
   const closeConfirmModal = () => setConfirmDelete({ open: false, target: null });
 
   return (
+    <>
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight">Tier Membership</h1>
@@ -314,5 +322,21 @@ export default function Membership() {
         </div>
       )}
     </section>
+    {notif && (
+        <div
+          className={`
+            fixed bottom-6 right-6 z-50
+            rounded-xl px-4 py-3 text-sm shadow-lg transition-all duration-300
+            ${
+              notif.type === "error"
+                ? "bg-red-100 border border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300"
+                : "bg-green-100 border border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300"
+            }
+          `}
+        >
+          {notif.msg}
+        </div>
+      )}
+    </>
   );
 }

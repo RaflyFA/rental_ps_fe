@@ -15,6 +15,7 @@ export default function Customer() {
   const [totalItems, setTotalItems] = useState(0);
   const [query, setQuery] = useState("");
   const [modalState, setModalState] = useState({ open: false, mode: "create" });
+  const [notif, setNotif] = useState(null);
   const [formData, setFormData] = useState({
     id_customer: null,
     nama: "",
@@ -24,6 +25,10 @@ export default function Customer() {
   const [confirmDelete, setConfirmDelete] = useState({ open: false, target: null });
   const membershipFetchedRef = useRef(false);
   const lastFetchedPageRef = useRef(null);
+  const showNotif = (msg, type = "success") => {
+    setNotif({ msg, type });
+    setTimeout(() => setNotif(null), 2500);
+  };
 
   const membershipLookup = useMemo(() => {
     return memberships.reduce((acc, tier) => {
@@ -125,15 +130,18 @@ export default function Customer() {
     await apiPost("/customers", buildPayload(payload));
     await fetchCustomer(1, { force: true });
     setPage(1);
+    showNotif("Customer berhasil ditambahkan");
   };
 
   const handleUpdateCustomer = async (id, payload) => {
     await apiPut(`/customers/${id}`, buildPayload(payload));
+    showNotif("Data customer berhasil diperbarui");
     await fetchCustomer(page, { force: true });
   };
 
   const handleDeleteCustomer = async (id) => {
     await apiDelete(`/customers/${id}`);
+    showNotif("Customer berhasil dihapus");
     const isLastItemOnPage = customers.length === 1 && page > 1;
     if (isLastItemOnPage) {
       const prevPage = Math.max(1, page - 1);
@@ -175,7 +183,7 @@ export default function Customer() {
 
   const closeConfirmModal = () => setConfirmDelete({ open: false, target: null });
 
-  return (
+  return (<>
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight">Data Customer</h1>
@@ -434,5 +442,21 @@ export default function Customer() {
         </div>
       )}
     </section>
+    {notif && (
+        <div
+          className={`
+            fixed bottom-6 right-6 z-50
+            rounded-xl px-4 py-3 text-sm shadow-lg transition-all duration-300
+            ${
+              notif.type === "error"
+                ? "bg-red-100 border border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300"
+                : "bg-green-100 border border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300"
+            }
+          `}
+        >
+          {notif.msg}
+        </div>
+      )}
+    </>
   );
 }

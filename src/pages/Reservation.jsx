@@ -458,7 +458,7 @@ function ReservationModal({
   );
 }
 
-function ReservationDetailModal({ isOpen, onClose, reservation, onDelete, fetchReservations }) {
+function ReservationDetailModal({ isOpen, onClose, reservation, onDelete, fetchReservations, showNotif }) {
   const navigate = useNavigate();
 
   if (!isOpen || !reservation) return null;
@@ -468,8 +468,9 @@ function ReservationDetailModal({ isOpen, onClose, reservation, onDelete, fetchR
   const handlePayment = async () => { 
     const response = await apiPost(`/reservations/pay/${reservation.id_reservation}`, { reservation_id: reservation.id_reservation });
     if(response){
-        onClose();
-        fetchReservations();
+      onClose();
+      showNotif("Status pembayaran berhasil diperbarui");
+      fetchReservations();
       }
     }
   return (
@@ -591,7 +592,7 @@ function getSlotStatus(room, hour, selectedDateString, reservations) {
         status: "Dibooking",
         text: (res.customer_name || "").split(" ")[0] || "Dibooking",
         reservation: res,
-        paymentStatus: res.payment_status || "UNPAID",
+        paymentStatus: res.payment_status ? "PAID" : "UNPAID",
       };
     }
   }
@@ -904,7 +905,11 @@ export default function Reservation() {
   const [rooms, setRooms] = useState([]);
   const [roomsLoading, setRoomsLoading] = useState(false);
   const [roomsError, setRoomsError] = useState("");
-
+  const [notif, setNotif] = useState(null);
+  const showNotif = (msg, type = "success") => {
+    setNotif({ msg, type });
+    setTimeout(() => setNotif(null), 2500);
+  };
   const roomLookup = useMemo(() => buildRoomLookup(rooms), [rooms]);
   const normalizedReservations = useMemo(
     () => reservations.map((res) => normalizeReservationRoom(res, roomLookup)),
@@ -1098,9 +1103,11 @@ export default function Reservation() {
     try {
       if (isModalNew || !selectedReservation?.id_reservation) {
         await apiPost("/reservations", payload);
+        showNotif("Reservasi berhasil ditambahkan");
       } else {
         await apiPut(`/reservations/${selectedReservation.id_reservation}`, payload
 );
+        showNotif("Reservasi berhasil diperbarui");
       }
       await fetchReservationsByDate(selectedDate);
       if (showHistory) {
@@ -1185,7 +1192,7 @@ export default function Reservation() {
     }
   };
 
-  return (
+  return (<>
     <section className="space-y-6">
       <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
         <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">
@@ -1407,7 +1414,24 @@ export default function Reservation() {
         onClose={() => setIsDetailOpen(false)}
         reservation={selectedDetailReservation}
         onDelete={handleDeleteReservation}
+        showNotif={showNotif}
       />
     </section>
+    {notif && (
+        <div
+          className={`
+            fixed bottom-6 right-6 z-50
+            rounded-xl px-4 py-3 text-sm shadow-lg transition-all duration-300
+            ${
+              notif.type === "error"
+                ? "bg-red-100 border border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300"
+                : "bg-green-100 border border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300"
+            }
+          `}
+        >
+          {notif.msg}
+        </div>
+      )}
+    </>
   );
 }
