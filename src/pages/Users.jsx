@@ -1,10 +1,9 @@
-﻿import React, { useState, useEffect } from "react";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+﻿import { useEffect, useState } from "react";
+import { Plus, Search, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api";
 
 function Modal({ visible, title, children, onClose }) {
   if (!visible) return null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-900">
@@ -26,40 +25,46 @@ function Modal({ visible, title, children, onClose }) {
   );
 }
 
+const PAGE_SIZE = 10;
+
 export default function Users() {
   const [users, setUsers] = useState([]);
   const [meta, setMeta] = useState({
     page: 1,
-    limit: 10,
+    limit: PAGE_SIZE,
     total: 0,
     totalPages: 1,
   });
-
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", role: "Staff" });
-
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "staff",
+  });
   const [showDelete, setShowDelete] = useState(false);
   const [toDelete, setToDelete] = useState(null);
+  const safeTotalPages = meta.totalPages || 1;
+  const limit = meta.limit || PAGE_SIZE;
+  const total = meta.total || users.length;
+  const from = total === 0 ? 0 : (page - 1) * limit + 1;
+  const to = total === 0 ? 0 : Math.min(page * limit, total);
 
   useEffect(() => {
     async function fetchUsers() {
       try {
         setLoading(true);
         setError("");
-
         const params = new URLSearchParams({
           page: String(page),
-          limit: "10",
+          limit: String(PAGE_SIZE),
           search: query,
         });
-
         const res = await apiGet(`/users?${params.toString()}`);
         setUsers(res.data || []);
         if (res.meta) {
@@ -68,6 +73,7 @@ export default function Users() {
           setMeta((prev) => ({
             ...prev,
             page,
+            limit: PAGE_SIZE,
             total: res.data ? res.data.length : 0,
             totalPages: 1,
           }));
@@ -75,6 +81,7 @@ export default function Users() {
       } catch (err) {
         console.error(err);
         setError(err?.message || "Gagal memuat user");
+        setUsers([]);
       } finally {
         setLoading(false);
       }
@@ -84,24 +91,37 @@ export default function Users() {
   }, [page, query]);
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", role: "Staff" });
+    setForm({
+      name: "",
+      email: "",
+      password: "",
+      role: "staff",
+    });
     setShowModal(true);
   }
-
   function openEdit(user) {
     setEditing(user);
-    setForm({ name: user.name, role: user.role });
+    const normalizedRole = (user.role || "staff").toLowerCase();
+    setForm({
+      name: user.name || "",
+      email: user.email || "",
+      password: "",
+      role: normalizedRole,
+    });
     setShowModal(true);
   }
-
   async function handleSave(e) {
     e.preventDefault();
     if (!form.name.trim()) return;
-
-    const payload = {
+    const basePayload = {
       name: form.name.trim(),
+      email: form.email.trim() || undefined,
       role: form.role,
     };
+    const payload =
+      editing && !form.password
+        ? basePayload
+        : { ...basePayload, password: form.password };
 
     try {
       setLoading(true);
@@ -115,9 +135,20 @@ export default function Users() {
       } else {
         const created = await apiPost("/users", payload);
         setUsers((prev) => [...prev, created]);
+        setMeta((prev) => ({
+          ...prev,
+          total: prev.total + 1,
+        }));
       }
 
       setShowModal(false);
+      setEditing(null);
+      setForm({
+        name: "",
+        email: "",
+        password: "",
+        role: "staff",
+      });
     } catch (err) {
       console.error(err);
       setError(err?.message || "Gagal menyimpan user");
@@ -126,6 +157,7 @@ export default function Users() {
     }
   }
 
+  // --- Delete ---
   function confirmDelete(user) {
     setToDelete(user);
     setShowDelete(true);
@@ -141,6 +173,10 @@ export default function Users() {
       await apiDelete(`/users/${toDelete.id}`);
 
       setUsers((prev) => prev.filter((u) => u.id !== toDelete.id));
+      setMeta((prev) => ({
+        ...prev,
+        total: Math.max(0, prev.total - 1),
+      }));
     } catch (err) {
       console.error(err);
       setError(err?.message || "Gagal menghapus user");
@@ -151,11 +187,9 @@ export default function Users() {
     }
   }
 
-  const canPrev = meta.page > 1;
-  const canNext = meta.page < meta.totalPages;
-
   return (
     <section className="space-y-6">
+      {/* Header + search + tombol tambah */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
           Daftar User
@@ -182,11 +216,15 @@ export default function Users() {
           </button>
         </div>
       </div>
+
+      {/* Error banner */}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200">
           {error}
         </div>
       )}
+
+      {/* Tabel user */}
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-900">
@@ -234,13 +272,11 @@ export default function Users() {
                 className="hover:bg-gray-50 dark:hover:bg-gray-800/60"
               >
                 <td className="px-4 py-3 text-sm">
-                  {(meta.page - 1) * meta.limit + idx + 1}
+                  {(page - 1) * limit + idx + 1}
                 </td>
+                <td className="px-4 py-3 text-sm">{u.name}</td>
                 <td className="px-4 py-3 text-sm">
-                  {u.name}
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  {u.role === "Owner" ? "Owner" : "Staff"}
+                  {String(u.role).toLowerCase() === "owner" ? "Owner" : "Staff"}
                 </td>
                 <td className="space-x-2 px-4 py-3 text-center">
                   <button
@@ -264,37 +300,8 @@ export default function Users() {
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
-        <div>
-          Halaman {meta.page} dari {meta.totalPages} • Total {meta.total} user
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={!canPrev}
-            onClick={() => canPrev && setPage((p) => p - 1)}
-            className={`rounded-md border px-3 py-1 ${
-              canPrev
-                ? "border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
-                : "cursor-not-allowed border-gray-200 text-gray-400 dark:border-gray-800 dark:text-gray-600"
-            }`}
-          >
-            Prev
-          </button>
-          <button
-            type="button"
-            disabled={!canNext}
-            onClick={() => canNext && setPage((p) => p + 1)}
-            className={`rounded-md border px-3 py-1 ${
-              canNext
-                ? "border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
-                : "cursor-not-allowed border-gray-200 text-gray-400 dark:border-gray-800 dark:text-gray-600"
-            }`}
-          >
-            Next
-          </button>
-        </div>
-      </div>
+
+      {/* Modal create / edit */}
       <Modal
         visible={showModal}
         title={editing ? "Edit User" : "Tambah User"}
@@ -302,13 +309,34 @@ export default function Users() {
       >
         <form onSubmit={handleSave}>
           <label className="mt-2 block text-sm text-gray-700 dark:text-gray-200">
-            Nama
+            Nama / Username
           </label>
           <input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
           />
+
+          <label className="mt-3 block text-sm text-gray-700 dark:text-gray-200">
+            Email
+          </label>
+          <input
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          />
+
+          <label className="mt-3 block text-sm text-gray-700 dark:text-gray-200">
+            Password {editing && " (kosongkan jika tidak diganti)"}
+          </label>
+          <input
+            type="password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          />
+
           <label className="mt-3 block text-sm text-gray-700 dark:text-gray-200">
             Jabatan
           </label>
@@ -317,9 +345,10 @@ export default function Users() {
             onChange={(e) => setForm({ ...form, role: e.target.value })}
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
           >
-            <option value="Owner">Owner</option>
-            <option value="Staff">Staff</option>
+            <option value="owner">Owner</option>
+            <option value="staff">Staff</option>
           </select>
+
           <div className="mt-4 flex justify-end gap-2">
             <button
               type="button"
@@ -337,6 +366,8 @@ export default function Users() {
           </div>
         </form>
       </Modal>
+
+      {/* Modal delete */}
       <Modal
         visible={showDelete}
         title="Konfirmasi Hapus"

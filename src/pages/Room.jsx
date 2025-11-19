@@ -8,19 +8,15 @@ export default function Room() {
   const [rooms, setRooms] = useState([]);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-
   const [open, setOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [editRoom, setEditRoom] = useState(null);
-
   const [form, setForm] = useState({ nama_room: "", harga: "", tipe_room: "", kapasitas: "" });
   const [notif, setNotif] = useState(null);
-
   const showNotif = (msg, type = "success") => {
     setNotif({ msg, type });
     setTimeout(() => setNotif(null), 2500);
   };
-
   const fetchRooms = async () => {
     try {
       const response = await apiGet("/room/with-price");
@@ -29,25 +25,19 @@ export default function Room() {
       showNotif(err.message || "Gagal memuat data ruangan", "error");
     }
   };
-
   useEffect(() => {
     fetchRooms();
   }, []);
-
   const filtered = useMemo(
     () => rooms.filter((r) => r.nama_room.toLowerCase().includes(query.toLowerCase())),
     [rooms, query]
   );
-
   const pageCount = Math.max(1, Math.ceil(filtered.length / itemMax));
   const currentPage = Math.min(page, pageCount);
-
   const startIndex = (currentPage - 1) * itemMax;
   const paginatedRooms = filtered.slice(startIndex, startIndex + itemMax);
-
   const from = filtered.length === 0 ? 0 : startIndex + 1;
   const to = Math.min(startIndex + itemMax, filtered.length);
-  
   const saveRoom = async (e) => {
     e.preventDefault();
     const payload = {
@@ -59,18 +49,14 @@ export default function Room() {
 
     try {
       if (editRoom) {
-        // untuk Update
         await apiPut(`/room/${editRoom.id_room}`, payload);
         fetchRooms();
         showNotif("Ruangan berhasil diubah");
       } else {
-        // untuk Create
         const created = await apiPost("/room", payload);
         setRooms((prev) => [created, ...prev]);
         showNotif("Ruangan berhasil ditambahkan");
       }
-
-      // Reset form
       setForm({ nama_room: "", harga: "", tipe_room: "", kapasitas: "" });
       setEditRoom(null);
       setOpen(false);
@@ -78,7 +64,6 @@ export default function Room() {
       showNotif(err.message || "Gagal menyimpan data", "error");
     }
   };
-
   const doDelete = async () => {
     try {
       await apiDelete(`/room/${deleteConfirm.id}`);
@@ -89,13 +74,10 @@ export default function Room() {
       showNotif(err.message || "Gagal menghapus ruangan", "error");
     }
   };
-
   return (
     <section className="space-y-6">
-      {/* HEADER */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight">Room List</h1>
-
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <Search className="h-5 w-5 text-gray-400" />
@@ -106,21 +88,18 @@ export default function Room() {
               className="w-56 bg-transparent text-sm outline-none placeholder:text-gray-400"
             />
           </div>
-
           <button
             onClick={() => {
               setForm({ nama_room: "", harga: "", tipe_room: "", kapasitas: "" });
               setEditRoom(null);
               setOpen(true);
             }}
-            className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
+            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-600"
           >
             <Plus className="h-4 w-4" /> Ruangan Baru
           </button>
         </div>
       </div>
-
-      {/* TABLE */}
       <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-800">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
           <colgroup>
