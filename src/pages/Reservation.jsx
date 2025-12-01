@@ -144,9 +144,18 @@ const extractHourFromString = (value) => {
 };
 
 const deriveReservationHours = (reservation) => {
-  const startHour = moment(reservation.waktu_mulai).format("H");
+  const startMoment = reservation?.waktu_mulai
+    ? moment(reservation.waktu_mulai)
+    : reservation?.date
+      ? moment(
+          `${reservation.date} ${reservation.time ?? "00:00"}`,
+          "YYYY-MM-DD HH:mm",
+        )
+      : null;
 
-  let endHour = moment(reservation.waktu_selesai).format("H");
+  let endMoment = reservation?.waktu_selesai
+    ? moment(reservation.waktu_selesai)
+    : null;
 
   const duration =
     parseInt(
@@ -157,13 +166,22 @@ const deriveReservationHours = (reservation) => {
       10,
     ) || 1;
 
-  if (startHour !== null && endHour === null) {
-    endHour = startHour + duration;
+  if (startMoment?.isValid() && (!endMoment || !endMoment.isValid())) {
+    endMoment = startMoment.clone().add(duration, "hour");
   }
 
+  const validStart = startMoment?.isValid() ? startMoment : null;
+  const validEnd = endMoment?.isValid() ? endMoment : null;
+  const normalizedEnd =
+    validStart && validEnd && validEnd.isBefore(validStart)
+      ? validEnd.clone().add(1, "day")
+      : validEnd;
+
   return {
-    startHour,
-    endHour,
+    startHour: validStart ? validStart.hour() : null,
+    endHour: normalizedEnd ? normalizedEnd.hour() : null,
+    startMoment: validStart,
+    endMoment: normalizedEnd,
   };
 };
 
@@ -560,22 +578,32 @@ function ReservationDetailModal({ isOpen, onClose, reservation, onDelete, fetchR
 
 const operationalHours = [
   2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-  23, 0,
+  23
 ];
 
 function getSlotStatus(room, hour, selectedDateString, reservations) {
   const timelineRoomId = normalizeRoomId(room);
+  const baseDate = moment(selectedDateString, "YYYY-MM-DD");
+  if (!baseDate.isValid()) {
+    return { status: "Tersedia", text: "Tersedia", paymentStatus: null };
+  }
+  const firstHour = operationalHours[0] ?? 0;
+  const slotStart = baseDate
+    .clone()
+    .hour(hour)
+    .minute(0)
+    .second(0)
+    .millisecond(0);
+  if (hour < firstHour) {
+    slotStart.add(1, "day"); // midnight slot belongs to the next day
+  }
+  const slotEnd = slotStart.clone().add(1, "hour");
 
   for (const res of reservations) {
-    const resDate = res.waktu_mulai
-    ? moment.utc(res.waktu_mulai).local().format("YYYY-MM-DD")
-    : res.date ?? null;
-    if (!resDate || resDate !== selectedDateString) continue;
-
     const reservationRoomId = normalizeRoomIdValue(
       res.room_id ?? res.id_room ?? res.room?.id,
     );
-
+ 
     if (
       timelineRoomId === null ||
       reservationRoomId === null ||
@@ -583,19 +611,22 @@ function getSlotStatus(room, hour, selectedDateString, reservations) {
     ) {
       continue;
     }
+    const { startMoment, endMoment } = deriveReservationHours(res);
+    if (!startMoment || !endMoment) continue;
+    console.log(slotStart.format("YYYY-MM-DD HH:mm"), endMoment.format("YYYY-MM-DD HH:mm") , slotEnd.format("YYYY-MM-DD HH:mm"), startMoment.format("YYYY-MM-DD HH:mm"))
+    const overlaps =
+      slotStart.isBefore(endMoment) && slotEnd.isAfter(startMoment);
 
-    const { startHour, endHour } = deriveReservationHours(res);
-    if (startHour === null || endHour === null) continue;
+    if (!overlaps) continue;
 
-    if (hour >= startHour && hour < endHour) {
-      return {
-        status: "Dibooking",
-        text: (res.customer_name || "").split(" ")[0] || "Dibooking",
-        reservation: res,
-        paymentStatus: res.payment_status ? "PAID" : "UNPAID",
-      };
-    }
+    return {
+      status: "Dibooking",
+      text: (res.customer_name || "").split(" ")[0] || "Dibooking",
+      reservation: res,
+      paymentStatus: res.payment_status ? "PAID" : "UNPAID",
+    };
   }
+  
   return { status: "Tersedia", text: "Tersedia", paymentStatus: null };
 }
 
@@ -614,7 +645,6 @@ function TimelineSlot({
     dateString,
     reservations
   );
-
   let slotClass =
     "h-16 border border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center text-xs p-1 text-center whitespace-nowrap overflow-hidden text-ellipsis";
 

@@ -20,6 +20,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
           <Route index element={<Reservation />} />
+          <Route path="reservation" element={<Reservation />} />
           <Route path="foods" element={<FoodList />} />
           <Route path="games" element={<Games />} />
           <Route path="rooms" element={<Room />} />
