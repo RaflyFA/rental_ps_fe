@@ -16,6 +16,7 @@ import Logo from "./Logo";
 import { useAuthStore } from "../store/useAuthStore";
 
 const nav = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/reservation", label: "Reservation", icon: CalendarRange },
   { to: "/games", label: "List Game", icon: Gamepad },
   { to: "/unit", label: "Unit Playstation", icon: Monitor },

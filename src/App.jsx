@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Reservation from "./pages/Reservation";
+import Dashboard from "./pages/Dashboard";
 import FoodList from "./pages/FoodList";
 import Games from "./pages/Games";
 import Room from "./pages/Room";
@@ -19,7 +20,7 @@ export default function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
-          <Route index element={<Reservation />} />
+          <Route index element={<Dashboard />} />
           <Route path="reservation" element={<Reservation />} />
           <Route path="foods" element={<FoodList />} />
           <Route path="games" element={<Games />} />
