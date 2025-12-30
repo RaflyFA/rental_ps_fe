@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api";
 import moment from "moment";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const IconTrash = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -41,6 +42,18 @@ const IconCalendarDate = () => (
     <path d="M8 18h.01" />
     <path d="M12 18h.01" />
     <path d="M16 18h.01" />
+  </svg>
+);
+const IconAlertCircle = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="8" x2="12" y2="12"></line>
+    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+  </svg>
+);
+const IconCheck = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
@@ -809,40 +822,33 @@ function ReservationTimeline({
   );
 }
 
-function ReservationHistoryTable({ reservations = [], onDelete }) {
+function ReservationHistoryTable({ reservations = [], onDelete, onPay }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
+          <colgroup>
+            <col style={{ width: "200px" }} />
+            <col style={{ width: "200px" }} />
+            <col />
+            <col style={{ width: "180px" }} />
+            <col style={{ width: "150px" }} />
+            <col style={{ width: "120px" }} />
+          </colgroup>
           <thead className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
             <tr>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Pelanggan
-              </th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Ruangan
-              </th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Waktu Pesan
-              </th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Total Harga
-              </th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Status Bayar
-              </th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Aksi
-              </th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Pelanggan</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Ruangan</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Waktu Pesan</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Total Harga</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Status Bayar</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {reservations.length === 0 ? (
               <tr>
-                <td
-                  colSpan="6"
-                  className="px-6 py-4 text-center text-gray-500 dark:text-gray-400"
-                >
+                <td colSpan="6" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                   Tidak ada data reservasi
                 </td>
               </tr>
@@ -850,49 +856,35 @@ function ReservationHistoryTable({ reservations = [], onDelete }) {
               reservations.map((res) => {
                 const start = new Date(res.waktu_mulai);
                 const end = new Date(res.waktu_selesai);
-                const timeRange = `${start.toLocaleDateString("id-ID")}, ${String(
-                  start.getHours()
-                ).padStart(2, "0")}:${String(start.getMinutes()).padStart(
-                  2,
-                  "0"
-                )} - ${String(end.getHours()).padStart(2, "0")}:${String(
-                  end.getMinutes()
-                ).padStart(2, "0")}`;
+                const timeRange = `${start.toLocaleDateString("id-ID")}, ${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")} - ${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
 
-                let statusBadgeColor =
-                  "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
-                if (res.payment_status === "PAID")
-                  statusBadgeColor =
-                    "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-                if (res.payment_status === "UNPAID")
-                  statusBadgeColor =
-                    "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+                let statusBadgeColor = "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+                if (res.payment_status === "PAID") statusBadgeColor = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+                if (res.payment_status === "UNPAID") statusBadgeColor = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
 
                 return (
-                  <tr
-                    key={res.id_reservation}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                  >
-                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                      {res.customer_name}
-                    </td>
-                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                      {res.nama_room}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-gray-700 dark:text-gray-300">
-                      {timeRange}
-                    </td>
-                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
-                      Rp {res.total_harga?.toLocaleString() || "0"}
-                    </td>
+                  <tr key={res.id_reservation} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{res.customer_name}</td>
+                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">{res.nama_room}</td>
+                    <td className="px-6 py-4 text-xs text-gray-700 dark:text-gray-300">{timeRange}</td>
+                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">Rp {res.total_harga?.toLocaleString() || "0"}</td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeColor}`}
-                      >
+                      <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeColor}`}>
                         {res.payment_status || "UNPAID"}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 flex items-center gap-2">
+                      {/* TAMPILKAN TOMBOL BAYAR HANYA JIKA BELUM LUNAS */}
+                      {res.payment_status !== "PAID" && (
+                        <button
+                          onClick={() => onPay && onPay(res.id_reservation)}
+                          className="inline-flex items-center gap-1 rounded-md bg-green-100 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
+                          title="Tandai Sudah Bayar"
+                        >
+                          <IconCheck /> Bayar
+                        </button>
+                      )}
+                      
                       <button
                         onClick={() => onDelete && onDelete(res.id_reservation)}
                         className="inline-flex items-center gap-2 rounded-md px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
@@ -916,17 +908,20 @@ export default function Reservation() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [onlyUnpaid, setOnlyUnpaid] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [reservations, setReservations] = useState([]);
   const [isModalNew, setIsModalNew] = useState(true);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [selectedDetailReservation, setSelectedDetailReservation] =
-    useState(null);
+  const [selectedDetailReservation, setSelectedDetailReservation] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchHistory, setSearchHistory] = useState([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const searchContainerRef = useRef(null);
   const [historyReservations, setHistoryReservations] = useState([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const [historyTotalData, setHistoryTotalData] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [customers, setCustomers] = useState([]);
@@ -945,12 +940,12 @@ export default function Reservation() {
     () => reservations.map((res) => normalizeReservationRoom(res, roomLookup)),
     [reservations, roomLookup],
   );
-  const normalizedHistoryReservations = useMemo(
+  const normalizedHistoryData = useMemo(
     () =>
       historyReservations.map((res) =>
-        normalizeReservationRoom(res, roomLookup),
+        normalizeReservationRoom(res, roomLookup)
       ),
-    [historyReservations, roomLookup],
+    [historyReservations, roomLookup]
   );
 
   const dateInputRef = useRef(null);
@@ -1006,7 +1001,7 @@ export default function Reservation() {
     if (showHistory) {
       fetchReservationHistory();
     }
-  }, [showHistory]);
+  }, [showHistory, historyPage, onlyUnpaid]);
 
   async function fetchRooms() {
     try {
@@ -1062,10 +1057,28 @@ export default function Reservation() {
 
   async function fetchReservationHistory() {
     try {
-      const data = await apiGet("/reservations");
-      setHistoryReservations(Array.isArray(data) ? data : []);
+      setLoading(true);
+      // Kirim parameter page, limit, dan status unpaid ke Backend
+      const unpaidParam = onlyUnpaid ? "&unpaid=true" : "";
+      const url = `/reservations?page=${historyPage}&limit=10${unpaidParam}`;
+      
+      const response = await apiGet(url);
+
+      // Backend sekarang mengembalikan object { data: [...], pagination: {...} }
+      if (response && response.data) {
+        setHistoryReservations(response.data);
+        setHistoryTotalPages(response.pagination.totalPages);
+        setHistoryTotalData(response.pagination.total);
+      } else {
+        // Fallback jaga-jaga
+        setHistoryReservations([]);
+        setHistoryTotalPages(1);
+      }
     } catch (e) {
       console.error(e);
+      setHistoryReservations([]);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -1199,6 +1212,19 @@ export default function Reservation() {
       alert("Gagal menghapus reservasi.");
     }
   };
+const handlePayReservationHistory = async (id) => {
+    try {
+      await apiPost(`/reservations/pay/${id}`, { reservation_id: id });
+      
+      showNotif("Status pembayaran berhasil diperbarui menjadi LUNAS");
+      
+      await fetchReservationHistory();
+      fetchReservationsByDate(selectedDate);
+    } catch (e) {
+      console.error(e);
+      alert("Gagal memperbarui pembayaran.");
+    }
+  };
 
   const handleDateChange = (e) => {
     const newDate = new Date(e.target.value);
@@ -1223,33 +1249,136 @@ export default function Reservation() {
   };
 
   return (<>
-    <section className="space-y-6">
-      <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-        <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">
-          {showHistory ? "History Reservasi" : "Manajemen Reservasi"}
-        </h1>
-        <div className="flex w-full gap-2 md:w-auto">
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="flex items-center justify-center rounded-md bg-gray-200 p-2 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-            title={showHistory ? "Kembali ke Timeline" : "Lihat History"}
-          >
-            <IconHistory />
-          </button>
-          <button
-            onClick={() => handleOpenModal(null, true)}
-            className="flex-grow rounded-md bg-blue-600 px-4 py-2 font-medium text-white shadow-lg hover:bg-blue-700 md:flex-grow-0"
-          >
-            + Tambah Reservasi Baru
-          </button>
+<section className="space-y-6">
+        <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+          <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">
+            {showHistory ? (onlyUnpaid ? "Tagihan Belum Lunas" : "History Reservasi") : "Manajemen Reservasi"}
+          </h1>
+          
+          <div className="flex w-full gap-2 md:w-auto">
+            {/* --- LOGIC TOMBOL NAVIGASI BARU --- */}
+            {!showHistory ? (
+              // Jika sedang di Timeline (Halaman Depan)
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setShowHistory(true); setOnlyUnpaid(true); }}
+                  className="flex items-center gap-2 rounded-md bg-red-100 px-4 py-2 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300"
+                >
+                  <IconAlertCircle /> Cek Unpaid
+                </button>
+                <button
+                  onClick={() => { setShowHistory(true); setOnlyUnpaid(false); }}
+                  className="flex items-center justify-center rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
+                >
+                  <IconHistory /> History
+                </button>
+              </div>
+            ) : (
+              // Jika sedang di Halaman History/Unpaid
+              <div className="flex rounded-md bg-gray-100 p-1 dark:bg-gray-800">
+                <button
+                  onClick={() => { setOnlyUnpaid(false); setHistoryPage(1); }}
+                  className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+                    !onlyUnpaid 
+                      ? "bg-white text-gray-900 shadow dark:bg-gray-600 dark:text-white" 
+                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                  }`}
+                >
+                  Semua
+                </button>
+                <button
+                  onClick={() => { setOnlyUnpaid(true); setHistoryPage(1); }}
+                  className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+                    onlyUnpaid 
+                      ? "bg-red-500 text-white shadow" 
+                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                  }`}
+                >
+                  Belum Lunas
+                </button>
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="ml-2 rounded px-3 py-1 text-sm font-medium text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
+                >
+                  ✕ Tutup
+                </button>
+              </div>
+            )}
+            
+            {!showHistory && (
+              <button
+                onClick={() => handleOpenModal(null, true)}
+                className="flex-grow rounded-md bg-blue-600 px-4 py-2 font-medium text-white shadow-lg hover:bg-blue-700 md:flex-grow-0"
+              >
+                + Tambah Reservasi
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {showHistory ? (
-        <ReservationHistoryTable
-          reservations={normalizedHistoryReservations}
-          onDelete={handleDeleteReservation}
-        />
+        {showHistory ? (
+          <>
+             {/* --- TABEL HISTORY --- */}
+            <ReservationHistoryTable
+              reservations={normalizedHistoryData} // Pake variabel baru tadi
+              onDelete={handleDeleteReservation}
+              onPay={handlePayReservationHistory}
+            />
+
+            {/* --- CONTROLS PAGINATION (BARU) --- */}
+            <div className="flex flex-col items-center justify-between gap-4 border-t border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900/60 sm:flex-row rounded-b-2xl mt-[-1rem] z-10 relative">
+              
+              {/* INFORMASI DATA (Kiri) */}
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Menampilkan{" "}
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {(historyPage - 1) * 10 + 1}
+                </span>
+                {" - "}
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {Math.min(historyPage * 10, historyTotalData)}
+                </span>
+                {" "}dari{" "}
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {historyTotalData}
+                </span>{" "}
+                data
+              </p>
+            
+              {/* TOMBOL NAVIGASI (Kanan) */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                  disabled={historyPage === 1}
+                  className={`flex items-center justify-center rounded-xl p-2 text-sm font-semibold transition-all
+                    ${historyPage === 1 
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600" 
+                      : "bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                    }`}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+            
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-300 min-w-[80px] text-center">
+                  Hal {historyPage} / {historyTotalPages || 1}
+                </span>
+            
+                <button
+                  type="button"
+                  onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
+                  disabled={historyPage >= historyTotalPages}
+                  className={`flex items-center justify-center rounded-xl p-2 text-sm font-semibold transition-all
+                    ${historyPage >= historyTotalPages 
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600" 
+                      : "bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                    }`}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </>
       ) : (
         <>
           <div className="flex flex-col gap-4 md:flex-row">

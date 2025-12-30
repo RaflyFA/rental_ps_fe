@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, Pencil, Search, ChevronRight, ChevronLeft } from "lucide-react";
 import { apiDelete, apiGet, apiPost, apiPut } from "../lib/api"
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 6;
 
 export default function FoodList() {
   const [foods, setFoods] = useState([]);
@@ -222,53 +222,56 @@ export default function FoodList() {
           </tbody>
         </table>
       </div>
-      <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between">
+      {/* --- PAGINATION FOOD LIST (Reference Style) --- */}
+      <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between rounded-b-2xl mt-[-1rem] z-10 relative">
+        
+        {/* KIRI: Info Halaman & Total Data */}
         <p className="text-gray-500 dark:text-gray-400">
-          Menampilkan{" "}
-          <span className="font-semibold">{from}</span>–
-          <span className="font-semibold text-gray-700 dark:text-gray-200">
-            {to}
-          </span>{" "}
-          dari{" "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">
-            {total}
-          </span>{" "}
-          menu
+          Menampilkan Menu{" "}
+          <span className="font-semibold text-gray-900 dark:text-white">
+            {total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}
+          </span>
+          {" - "}
+          <span className="font-semibold text-gray-900 dark:text-white">
+            {Math.min(page * PAGE_SIZE, total)}
+          </span>
+          <span className="ml-2 text-xs text-gray-400">
+             (Total {total} Menu)
+          </span>
         </p>
-          <div className="inline-flex items-center gap-1 self-end md:self-auto">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 
-                ${page === 1 
-                  ? "bg-indigo-300 text-white cursor-not-allowed" 
-                  : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95"
-                } 
-                dark:bg-indigo-500 dark:hover:bg-indigo-600`}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-              
-            <span className="text-xs text-gray-600 dark:text-gray-300">
-              Halaman {page} / {safeTotalPages}
-            </span>
-              
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(safeTotalPages, p + 1))}
-              disabled={page === safeTotalPages}
-              className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 
-                ${page === safeTotalPages 
-                  ? "bg-indigo-300 text-white cursor-not-allowed" 
-                  : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95"
-                }
-                dark:bg-indigo-500 dark:hover:bg-indigo-600`}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
 
+        {/* KANAN: Tombol Navigasi */}
+        <div className="inline-flex items-center gap-2 self-end md:self-auto">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 transition-all
+              ${page === 1 
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-600" 
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300 min-w-[80px] text-center">
+            Hal {page} / {totalPages || 1}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 transition-all
+              ${page >= totalPages 
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-600" 
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {openForm && (

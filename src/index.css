@@ -4,6 +4,31 @@
 /* Use `.dark` class on <html> to enable dark: utilities (Tailwind v4 way) */
 @custom-variant dark (&:where(.dark, .dark *));
 
+@layer utilities {/* Hapus kode scrollbar lama jika ada */}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 20px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.8);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
 
 /* Optional: smooth font rendering */
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
