@@ -3,7 +3,7 @@ import {
   LayoutDashboard,
   CalendarRange,
   Settings,
-  Gamepad,
+  LucideGamepad2,
   Monitor,
   UtensilsCrossed,
   DoorOpen,
@@ -18,7 +18,7 @@ import { useAuthStore } from "../store/useAuthStore";
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/reservation", label: "Reservation", icon: CalendarRange },
-  { to: "/games", label: "List Game", icon: Gamepad },
+  { to: "/games", label: "List Game", icon: LucideGamepad2 },
   { to: "/unit", label: "Unit Playstation", icon: Monitor },
   { to: "/foods", label: "Food List", icon: UtensilsCrossed },
   { to: "/rooms", label: "Room", icon: DoorOpen },

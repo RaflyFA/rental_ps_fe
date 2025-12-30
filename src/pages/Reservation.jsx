@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api";
 import moment from "moment";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ReceiptText } from "lucide-react";
 
 const IconTrash = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -42,13 +42,6 @@ const IconCalendarDate = () => (
     <path d="M8 18h.01" />
     <path d="M12 18h.01" />
     <path d="M16 18h.01" />
-  </svg>
-);
-const IconAlertCircle = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"></circle>
-    <line x1="12" y1="8" x2="12" y2="12"></line>
-    <line x1="12" y1="16" x2="12.01" y2="16"></line>
   </svg>
 );
 const IconCheck = () => (
@@ -636,7 +629,7 @@ function getSlotStatus(room, hour, selectedDateString, reservations) {
       status: "Dibooking",
       text: (res.customer_name || "").split(" ")[0] || "Dibooking",
       reservation: res,
-      paymentStatus: res.payment_status ? "PAID" : "UNPAID",
+      paymentStatus: res.payment_status ? "LUNAS" : "BELUM DIBAYAR",
     };
   }
   
@@ -828,12 +821,12 @@ function ReservationHistoryTable({ reservations = [], onDelete, onPay }) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <colgroup>
-            <col style={{ width: "200px" }} />
-            <col style={{ width: "200px" }} />
-            <col />
-            <col style={{ width: "180px" }} />
-            <col style={{ width: "150px" }} />
-            <col style={{ width: "120px" }} />
+            <col style={{ width: "25%" }} /> {/* Pelanggan */}
+            <col style={{ width: "15%" }} /> {/* Ruangan */}
+            <col style={{ width: "20%" }} /> {/* Waktu */}
+            <col style={{ width: "15%" }} /> {/* Harga */}
+            <col style={{ width: "15%" }} /> {/* Status */}
+            <col style={{ width: "10%" }} /> {/* Aksi */}
           </colgroup>
           <thead className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
             <tr>
@@ -841,15 +834,18 @@ function ReservationHistoryTable({ reservations = [], onDelete, onPay }) {
               <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Ruangan</th>
               <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Waktu Pesan</th>
               <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Total Harga</th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Status Bayar</th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Aksi</th>
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">Status Bayar</th>
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {reservations.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                  Tidak ada data reservasi
+                <td colSpan="6" className="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-lg font-medium">Tidak ada data reservasi</span>
+                    <span className="text-sm">Belum ada transaksi yang tercatat.</span>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -859,39 +855,57 @@ function ReservationHistoryTable({ reservations = [], onDelete, onPay }) {
                 const timeRange = `${start.toLocaleDateString("id-ID")}, ${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")} - ${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
 
                 let statusBadgeColor = "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
-                if (res.payment_status === "PAID") statusBadgeColor = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-                if (res.payment_status === "UNPAID") statusBadgeColor = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+                if (res.payment_status === "LUNAS") statusBadgeColor = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+                if (res.payment_status === "BELUM DIBAYAR") statusBadgeColor = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
 
                 return (
-                  <tr key={res.id_reservation} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{res.customer_name}</td>
-                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">{res.nama_room}</td>
-                    <td className="px-6 py-4 text-xs text-gray-700 dark:text-gray-300">{timeRange}</td>
-                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">Rp {res.total_harga?.toLocaleString() || "0"}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeColor}`}>
-                        {res.payment_status || "UNPAID"}
-                      </span>
+                  <tr key={res.id_reservation} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <td className="px-6 py-4 font-normal text-gray-900 dark:text-white">
+                      {res.customer_name}
                     </td>
-                    <td className="px-6 py-4 flex items-center gap-2">
-                      {/* TAMPILKAN TOMBOL BAYAR HANYA JIKA BELUM LUNAS */}
-                      {res.payment_status !== "PAID" && (
+                    <td className="px-6 py-4 font-normal text-gray-700 dark:text-gray-300">
+                      {res.nama_room}
+                    </td>
+                    <td className="px-6 py-4 font-normal text-xs text-gray-700 dark:text-gray-300">
+                      {timeRange}
+                    </td>
+                    <td className="px-6 py-4 font-normal text-gray-900 dark:text-white">
+                      Rp {res.total_harga?.toLocaleString() || "0"}
+                    </td>
+                    <td className="px-6 py-4 font-medium">
+                      <div className="flex justify-center">
+                        <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs ${statusBadgeColor}`}>
+                          {res.payment_status || "BELUM DIBAYAR"}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* 6. Aksi (Tombol) */}
+                    <td className="px-6 py-4">
+                      {/* WRAPPER FLEX UTAMA: Mengatur tombol ke tengah */}
+                      <div className="flex items-center justify-center gap-2">
+                        
+                        {/* Tombol Bayar */}
+                        {res.payment_status !== "LUNAS" && (
+                          <button
+                            onClick={() => onPay && onPay(res.id_reservation)}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-100 hover:text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
+                            title="Tandai Sudah Bayar"
+                          >
+                            <IconCheck className="h-4 w-4" /> 
+                            <span>Bayar</span>
+                          </button>
+                        )}
+
+                        {/* Tombol Hapus (Kotak Simetris) */}
                         <button
-                          onClick={() => onPay && onPay(res.id_reservation)}
-                          className="inline-flex items-center gap-1 rounded-md bg-green-100 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
-                          title="Tandai Sudah Bayar"
+                          onClick={() => onDelete && onDelete(res.id_reservation)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+                          title="Hapus reservasi"
                         >
-                          <IconCheck /> Bayar
+                          <IconTrash className="h-4 w-4" />
                         </button>
-                      )}
-                      
-                      <button
-                        onClick={() => onDelete && onDelete(res.id_reservation)}
-                        className="inline-flex items-center gap-2 rounded-md px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
-                        title="Hapus reservasi"
-                      >
-                        <IconTrash />
-                      </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -1264,11 +1278,11 @@ const handlePayReservationHistory = async (id) => {
                   onClick={() => { setShowHistory(true); setOnlyUnpaid(true); }}
                   className="flex items-center gap-2 rounded-md bg-red-100 px-4 py-2 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300"
                 >
-                  <IconAlertCircle /> Cek Unpaid
+                  <ReceiptText />
                 </button>
                 <button
                   onClick={() => { setShowHistory(true); setOnlyUnpaid(false); }}
-                  className="flex items-center justify-center rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
+                  className="flex items-center gap-2 rounded-md bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
                 >
                   <IconHistory /> History
                 </button>

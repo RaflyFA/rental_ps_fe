@@ -1,8 +1,9 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Pencil, Trash2, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api";
 
-const itemMax = 5;
+// Sesuai request: limit jadi 6
+const itemMax = 6;
 
 export default function Games() {
   const [games, setGames] = useState([]);
@@ -32,15 +33,19 @@ export default function Games() {
   useEffect(() => {
     fetchUnits();
   }, []);
-
   useEffect(() => {
-    fetchGames();
-  }, [page]);
+    setPage(1); 
+  }, [query])
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      fetchGames();
+    }, 150);
+    return () => clearTimeout(timeout);
+  }, [page, query]);
 
   const fetchGames = async () => {
     try {
-      const data = await apiGet(`/games?page=${page}&limit=${itemMax}`);
-
+      const data = await apiGet(`/games?page=${page}&limit=${itemMax}&search=${query}`);
       setGames(data.data);
       setTotal(data.total);
       setPageCount(data.totalPages);
@@ -61,13 +66,7 @@ export default function Games() {
   // ===============================
   // FILTER SEARCH
   // ===============================
-  const filtered = useMemo(() => {
-    return games.filter((g) =>
-      g.nama_game.toLowerCase().includes(query.toLowerCase())
-    );
-  }, [games, query]);
-
-  const paginatedGames = filtered; // BE pagination sudah handle, FE hanya filter
+  const paginatedGames = games;
 
   // ===============================
   // CREATE / UPDATE
@@ -144,67 +143,78 @@ export default function Games() {
       <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-800">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
           <colgroup>
-            <col style={{ width: "64px" }} />
+            <col style={{ width: "80px" }} />
             <col />
-            <col style={{ width: "200px" }} />
-            <col style={{ width: "120px" }} />
+            <col style={{ width: "250px" }} />
+            <col style={{ width: "150px" }} />
           </colgroup>
+          
+          {/* HEADER: Pakai font-semibold (sesuai request) */}
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
                 No
               </th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
                 Nama Game
               </th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
                 Nama Unit
               </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide">
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">
                 Aksi
               </th>
             </tr>
           </thead>
 
+          {/* BODY: Pakai font-normal (biar clean) */}
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-900">
             {paginatedGames.map((game, index) => (
-              <tr key={game.id_game}>
-                <td className="px-4 py-3 text-sm text-gray-500">
+              <tr key={game.id_game} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <td className="px-6 py-4 text-sm font-normal text-gray-500">
                   {(page - 1) * itemMax + index + 1}
                 </td>
-                <td className="px-4 py-3 text-sm font-medium">{game.nama_game}</td>
-                <td className="px-4 py-3 text-sm">{game.unit?.nama_unit ?? "-"}</td>
+                <td className="px-6 py-4 text-sm font-normal text-gray-900 dark:text-white">
+                  {game.nama_game}
+                </td>
+                <td className="px-6 py-4 text-sm font-normal text-gray-700 dark:text-gray-300">
+                  {game.unit?.nama_unit ?? "-"}
+                </td>
 
-                <td className="px-4 py-3 text-center space-x-2">
-                  <button
-                    onClick={() => {
-                      setNewGame({
-                        id: game.id_game,
-                        name: game.nama_game,
-                        unit: game.id_unit
-                      });
-                      setOpen(true);
-                    }}
-                    className="mr-2 rounded-lg border border-gray-200 p-2 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
+                <td className="px-6 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      title="Edit"
+                      onClick={() => {
+                        setNewGame({
+                          id: game.id_game,
+                          name: game.nama_game,
+                          unit: game.id_unit
+                        });
+                        setOpen(true);
+                      }}
+                      className="rounded-lg border border-gray-200 p-2 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
 
-                  <button
-                    onClick={() =>
-                      setDeleteConfirm({ open: true, id: game.id_game })
-                    }
-                    className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                    <button
+                      title="Hapus"
+                      onClick={() =>
+                        setDeleteConfirm({ open: true, id: game.id_game })
+                      }
+                      className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
 
             {paginatedGames.length === 0 && (
               <tr>
-                <td colSpan="4" className="py-4 text-center text-gray-500">
+                <td colSpan="4" className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                   Tidak ada game ditemukan
                 </td>
               </tr>
@@ -214,37 +224,48 @@ export default function Games() {
       </div>
 
       {/* PAGINATION */}
-      <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between rounded-b-2xl mt-[-1.5rem] relative z-10">
         <p className="text-gray-500 dark:text-gray-400">
-          Halaman{" "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">
-            {page}
-          </span>{" "}
-          dari{" "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">
-            {pageCount}
+          Menampilkan Game ke{" "}
+          <span className="font-semibold text-gray-900 dark:text-white">
+             {total === 0 ? 0 : (page - 1) * itemMax + 1}
+          </span>
+          {" - "}
+          <span className="font-semibold text-gray-900 dark:text-white">
+             {Math.min(page * itemMax, total)}
+          </span>
+          <span className="ml-2 text-xs text-gray-400">
+             (Total {total} Game)
           </span>
         </p>
 
-        <div className="inline-flex items-center gap-1 self-end md:self-auto">
+        <div className="inline-flex items-center gap-2 self-end md:self-auto">
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
+            className={`flex items-center gap-2 rounded-xl px-3 py-1 text-sm font-semibold transition-all
+              ${page === 1 
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600" 
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
 
-          <span className="text-xs text-gray-600 dark:text-gray-300">
-            Halaman {page} / {pageCount}
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300 min-w-[80px] text-center">
+            Hal {page} / {pageCount || 1}
           </span>
 
           <button
             type="button"
             onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
             disabled={page === pageCount}
-            className="rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600 flex items-center gap-2"
+            className={`flex items-center gap-2 rounded-xl px-3 py-1 text-sm font-semibold transition-all
+              ${page === pageCount 
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600" 
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -261,24 +282,24 @@ export default function Games() {
 
             <form className="mt-4 space-y-4">
               <label className="block">
-                <span className="text-sm">Nama Game</span>
+                <span className="text-sm font-medium">Nama Game</span>
                 <input
                   value={newGame.name}
                   onChange={(e) =>
                     setNewGame((s) => ({ ...s, name: e.target.value }))
                   }
-                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 />
               </label>
 
               <label className="block">
-                <span className="text-sm">Nama Unit</span>
+                <span className="text-sm font-medium">Nama Unit</span>
                 <select
                   value={newGame.unit}
                   onChange={(e) =>
                     setNewGame((s) => ({ ...s, unit: e.target.value }))
                   }
-                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="">-- Pilih Unit --</option>
                   {units.map((u) => (
@@ -289,11 +310,11 @@ export default function Games() {
                 </select>
               </label>
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-xl border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                  className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                 >
                   Batal
                 </button>
@@ -314,22 +335,22 @@ export default function Games() {
       {/* DELETE CONFIRM */}
       {deleteConfirm.open && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
-          <div className="max-w-sm w-full bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-700">
+          <div className="max-w-sm w-full bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl">
             <h3 className="text-lg font-semibold">Hapus Game?</h3>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               Data yang dihapus tidak dapat dikembalikan.
             </p>
 
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-6 flex justify-end gap-2">
               <button
-                className="px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                 onClick={() => setDeleteConfirm({ open: false, id: null })}
               >
                 Batal
               </button>
 
               <button
-                className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700"
+                className="px-4 py-2 rounded-xl bg-red-600 text-sm font-semibold text-white hover:bg-red-700"
                 onClick={doDelete}
               >
                 Hapus

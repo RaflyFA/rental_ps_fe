@@ -50,9 +50,12 @@ export default function FoodList() {
         setTotalPages(1);
       }
     }
-    fetchFoods();
+    const timer = setTimeout(() => {
+      fetchFoods();
+    }, 150);
     return () => {
       alive = false;
+      clearTimeout(timer);
     };
   }, [page, query, refreshToken]);
   const safeTotalPages = totalPages || 1;
@@ -161,16 +164,16 @@ export default function FoodList() {
           </colgroup>
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
                 ID
               </th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
                 Nama
               </th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
                 Harga
               </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide">
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">
                 Action
               </th>
             </tr>
@@ -178,20 +181,20 @@ export default function FoodList() {
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-900">
             {foods.map((f) => (
               <tr key={f.id_food}>
-                <td className="px-4 py-3 text-sm text-gray-500">
+                <td className="px-4 py-4 font-normal text-sm text-gray-500">
                   {f.id_food}
                 </td>
-                <td className="px-4 py-3 text-sm font-medium">
+                <td className="px-4 py-4 text-sm font-normal">
                   {f.nama_makanan}
                 </td>
-                <td className="px-4 py-3 text-sm">
+                <td className="px-4 py-4 text-sm">
                   {new Intl.NumberFormat("id-ID", {
                     style: "currency",
                     currency: "IDR",
                     maximumFractionDigits: 0,
                   }).format(Number(f.harga))}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-4 text-right">
                   <button
                     title="Edit"
                     onClick={() => openEditModal(f)}
