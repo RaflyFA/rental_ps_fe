@@ -583,8 +583,7 @@ function ReservationDetailModal({ isOpen, onClose, reservation, onDelete, fetchR
 }
 
 const operationalHours = [
-  2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-  23
+  2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
 ];
 
 function getSlotStatus(room, hour, selectedDateString, reservations) {
@@ -629,7 +628,7 @@ function getSlotStatus(room, hour, selectedDateString, reservations) {
       status: "Dibooking",
       text: (res.customer_name || "").split(" ")[0] || "Dibooking",
       reservation: res,
-      paymentStatus: res.payment_status ? "LUNAS" : "BELUM DIBAYAR",
+      paymentStatus: res.payment_status,
     };
   }
   
@@ -654,23 +653,24 @@ function TimelineSlot({
   let slotClass =
     "h-16 border border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center text-xs p-1 text-center whitespace-nowrap overflow-hidden text-ellipsis";
 
-  switch (status) {
-    case "Tersedia":
-      slotClass +=
-        " bg-green-50 text-green-700 dark:bg-green-900/50 dark:text-green-300 opacity-60 hover:opacity-100 hover:bg-green-100 dark:hover:bg-green-800";
-      break;
-    case "Dibooking":
-      slotClass +=
-        " bg-yellow-100 text-yellow-700 dark:bg-yellow-900/60 dark:text-yellow-300";
-      break;
-    case "Diisi":
-      slotClass +=
-        " bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300";
-      break;
-    case "Tidak Tersedia":
-      slotClass +=
-        " bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-500";
-      break;
+  if (status === "Tersedia") {
+     slotClass += " bg-green-50 text-green-700 dark:bg-green-900/50 dark:text-green-300 opacity-60 hover:opacity-100 hover:bg-green-100 dark:hover:bg-green-800";
+  } else if (status === "Dibooking") {
+    // Check Payment Status to determine color
+    if (paymentStatus === "LUNAS") {
+       // Green for Paid
+       slotClass += " bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 cursor-pointer hover:bg-emerald-200";
+    } else if (paymentStatus === "BELUM LUNAS") {
+       // Orange for Partial Payment (Budi's case)
+       slotClass += " bg-yellow-100 text-yellow-800 dark:bg-yellow-900/60 dark:text-yellow-200 cursor-pointer hover:bg-yellow-200";
+    } else {
+       // Yellow/Red for Unpaid
+       slotClass += " bg-orange-100 text-orange-800 dark:bg-orange-900/60 dark:text-orange-200 cursor-pointer hover:bg-orange-200";
+    }
+  } else if (status === "Diisi") {
+    slotClass += " bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300";
+  } else {
+    slotClass += " bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-500";
   }
 
   const q = (searchQuery || "").trim().toLowerCase();

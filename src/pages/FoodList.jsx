@@ -181,20 +181,20 @@ export default function FoodList() {
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-900">
             {foods.map((f) => (
               <tr key={f.id_food}>
-                <td className="px-4 py-4 font-normal text-sm text-gray-500">
+                <td className="px-4 py-3 font-normal text-sm text-gray-500">
                   {f.id_food}
                 </td>
-                <td className="px-4 py-4 text-sm font-normal">
+                <td className="px-4 py-3 text-sm font-normal">
                   {f.nama_makanan}
                 </td>
-                <td className="px-4 py-4 text-sm">
+                <td className="px-4 py-3 text-sm">
                   {new Intl.NumberFormat("id-ID", {
                     style: "currency",
                     currency: "IDR",
                     maximumFractionDigits: 0,
                   }).format(Number(f.harga))}
                 </td>
-                <td className="px-4 py-4 text-right">
+                <td className="px-4 py-3 text-right">
                   <button
                     title="Edit"
                     onClick={() => openEditModal(f)}
@@ -230,7 +230,7 @@ export default function FoodList() {
         
         {/* KIRI: Info Halaman & Total Data */}
         <p className="text-gray-500 dark:text-gray-400">
-          Menampilkan Menu{" "}
+          Menampilkan menu makanan{" "}
           <span className="font-semibold text-gray-900 dark:text-white">
             {total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}
           </span>
@@ -239,7 +239,7 @@ export default function FoodList() {
             {Math.min(page * PAGE_SIZE, total)}
           </span>
           <span className="ml-2 text-xs text-gray-400">
-             (Total {total} Menu)
+             (Total {total} menu)
           </span>
         </p>
 
