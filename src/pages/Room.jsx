@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2, Pencil, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api.js";
 
@@ -8,6 +8,9 @@ export default function Room() {
   const [rooms, setRooms] = useState([]);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [editRoom, setEditRoom] = useState(null);
@@ -19,25 +22,35 @@ export default function Room() {
   };
   const fetchRooms = async () => {
     try {
-      const response = await apiGet("/room/with-price");
-      setRooms(response.data);
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(itemMax),
+        search: query.trim(),
+      });
+      const response = await apiGet(`/room/with-price?${params.toString()}`);
+      setRooms(response.data || []);
+      setTotal(response.meta?.total ?? 0);
+      setTotalPages(response.meta?.totalPages ?? 1);
     } catch (err) {
       showNotif(err.message || "Gagal memuat data ruangan", "error");
+      setRooms([]);
+      setTotal(0);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
     }
   };
   useEffect(() => {
     fetchRooms();
-  }, []);
-  const filtered = useMemo(
-    () => rooms.filter((r) => r.nama_room.toLowerCase().includes(query.toLowerCase())),
-    [rooms, query]
-  );
-  const pageCount = Math.max(1, Math.ceil(filtered.length / itemMax));
+  }, [page, query]);
+
+  const pageCount = Math.max(1, totalPages || 1);
   const currentPage = Math.min(page, pageCount);
   const startIndex = (currentPage - 1) * itemMax;
-  const paginatedRooms = filtered.slice(startIndex, startIndex + itemMax);
-  const from = filtered.length === 0 ? 0 : startIndex + 1;
-  const to = Math.min(startIndex + itemMax, filtered.length);
+  const paginatedRooms = rooms;
+  const from = total === 0 ? 0 : startIndex + 1;
+  const to = total === 0 ? 0 : Math.min(startIndex + itemMax, total);
   const saveRoom = async (e) => {
     e.preventDefault();
     const payload = {
@@ -53,8 +66,8 @@ export default function Room() {
         fetchRooms();
         showNotif("Ruangan berhasil diubah");
       } else {
-        const created = await apiPost("/room", payload);
-        setRooms((prev) => [created, ...prev]);
+        await apiPost("/room", payload);
+        fetchRooms();
         showNotif("Ruangan berhasil ditambahkan");
       }
       setForm({ nama_room: "", harga: "", tipe_room: "", kapasitas: "" });
@@ -67,7 +80,7 @@ export default function Room() {
   const doDelete = async () => {
     try {
       await apiDelete(`/room/${deleteConfirm.id}`);
-      setRooms((prev) => prev.filter((r) => r.id_room !== deleteConfirm.id));
+      fetchRooms();
       showNotif("Ruangan berhasil dihapus");
       setDeleteConfirm({ open: false, id: null });
     } catch (err) {
@@ -83,7 +96,10 @@ export default function Room() {
             <Search className="h-5 w-5 text-gray-400" />
             <input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setPage(1);
+                setQuery(e.target.value);
+              }}
               placeholder="Cari ruangan…"
               className="w-56 bg-transparent text-sm outline-none placeholder:text-gray-400"
             />
@@ -159,7 +175,7 @@ export default function Room() {
               </tr>
             ))}
 
-            {filtered.length === 0 && (
+            {!loading && rooms.length === 0 && (
               <tr>
                 <td colSpan="5" className="py-4 text-center text-gray-500">
                   Tidak ada ruangan ditemukan
@@ -278,8 +294,8 @@ export default function Room() {
       )}
       <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between">
         <p className="text-gray-500 dark:text-gray-400">
-          Menampilkan <span className="font-semibold">{from}</span>–<span className="font-semibold text-gray-700 dark:text-gray-200">{to}</span> dari{" "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">{filtered.length}</span> ruangan
+          Menampilkan <span className="font-semibold">{from}</span>-<span className="font-semibold text-gray-700 dark:text-gray-200">{to}</span> dari{" "}
+          <span className="font-semibold text-gray-700 dark:text-gray-200">{total}</span> ruangan
         </p>
         <div className="inline-flex items-center gap-2">
           <button
@@ -316,3 +332,5 @@ export default function Room() {
     </section>
   );
 }
+
+

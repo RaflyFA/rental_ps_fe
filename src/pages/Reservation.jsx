@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api";
 import moment from "moment";
 import { ChevronLeft, ChevronRight, ReceiptText } from "lucide-react";
@@ -229,6 +229,13 @@ function ReservationModal({
   customers = [],
   customersLoading = false,
   customersError = "",
+  customerPage = 1,
+  customerTotalPages = 1,
+  setCustomerPage,
+  setCustomerSearch,
+  showNotif,
+  allowPastReservation = false,
+  setAllowPastReservation,
   fetchReservations
 }) {
   const isEditMode = reservation != null && !isNew;
@@ -252,15 +259,6 @@ function ReservationModal({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const filteredCustomers = useMemo(() => {
-    if (!Array.isArray(customers)) return [];
-    const query = customerQuery.trim().toLowerCase();
-    const baseList = query
-      ? customers.filter((cust) => cust.nama?.toLowerCase().includes(query))
-      : customers;
-    return baseList.slice(0, 10);
-  }, [customerQuery, customers]);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -288,6 +286,12 @@ function ReservationModal({
       customer_name: value,
       customer_id: null,
     }));
+    if (typeof setCustomerSearch === "function") {
+      setCustomerSearch(value);
+    }
+    if (typeof setCustomerPage === "function") {
+      setCustomerPage(1);
+    }
     setShowCustomerDropdown(true);
   };
 
@@ -304,11 +308,15 @@ function ReservationModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.customer_id) {
-      alert("Pilih pelanggan dari daftar.");
+      if (typeof showNotif === "function") {
+        showNotif("Pilih pelanggan dari daftar.", "error");
+      }
       return;
     }
     if (!formData.room_id) {
-      alert("Pilih ruangan untuk reservasi.");
+      if (typeof showNotif === "function") {
+        showNotif("Pilih ruangan untuk reservasi.", "error");
+      }
       return;
     }
     if (typeof onSave === "function") {
@@ -362,12 +370,12 @@ function ReservationModal({
                   <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-300">
                     Memuat data pelanggan...
                   </div>
-                ) : filteredCustomers.length === 0 ? (
+                ) : customers.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-300">
                     Tidak ada pelanggan
                   </div>
                 ) : (
-                  filteredCustomers.map((customer) => (
+                  customers.map((customer) => (
                     <button
                       type="button"
                       key={customer.id_customer}
@@ -384,6 +392,39 @@ function ReservationModal({
                       )}
                     </button>
                   ))
+                )}
+                {!customersLoading && customers.length > 0 && (
+                  <div className="flex items-center justify-between border-t border-gray-100 px-3 py-2 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    <span>
+                      Hal {customerPage} / {customerTotalPages}
+                    </span>
+                    <div className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          typeof setCustomerPage === "function" &&
+                          setCustomerPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={customerPage === 1}
+                        className="rounded-md bg-indigo-600 px-2 py-1 text-white disabled:opacity-50"
+                      >
+                        Prev
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          typeof setCustomerPage === "function" &&
+                          setCustomerPage((p) =>
+                            Math.min(customerTotalPages || 1, p + 1)
+                          )
+                        }
+                        disabled={customerPage >= (customerTotalPages || 1)}
+                        className="rounded-md bg-indigo-600 px-2 py-1 text-white disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
@@ -461,6 +502,19 @@ function ReservationModal({
             />
           </div>
 
+          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={allowPastReservation}
+              onChange={(e) =>
+                typeof setAllowPastReservation === "function" &&
+                setAllowPastReservation(e.target.checked)
+              }
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Izinkan input manual untuk waktu yang sudah lewat
+          </label>
+
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
@@ -484,6 +538,46 @@ function ReservationModal({
 
 function ReservationDetailModal({ isOpen, onClose, reservation, onDelete, fetchReservations, showNotif }) {
   const navigate = useNavigate();
+  const [orderFoods, setOrderFoods] = useState([]);
+  const [orderFoodsPage, setOrderFoodsPage] = useState(1);
+  const [orderFoodsTotalPages, setOrderFoodsTotalPages] = useState(1);
+  const [orderFoodsTotal, setOrderFoodsTotal] = useState(0);
+  const [orderFoodsLoading, setOrderFoodsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!reservation?.id_reservation) return;
+    setOrderFoodsPage(1);
+  }, [reservation?.id_reservation]);
+
+  useEffect(() => {
+    async function fetchOrderFoods() {
+      try {
+        setOrderFoodsLoading(true);
+        const params = new URLSearchParams({
+          page: String(orderFoodsPage),
+          limit: "5",
+        });
+        const response = await apiGet(
+          `/order-foods/by-reservation/${reservation.id_reservation}?${params.toString()}`
+        );
+        const list = response?.data ?? [];
+        setOrderFoods(list);
+        setOrderFoodsTotal(response?.meta?.total ?? list.length);
+        setOrderFoodsTotalPages(response?.meta?.totalPages ?? 1);
+      } catch (err) {
+        console.error(err);
+        setOrderFoods([]);
+        setOrderFoodsTotal(0);
+        setOrderFoodsTotalPages(1);
+      } finally {
+        setOrderFoodsLoading(false);
+      }
+    }
+
+    if (reservation?.id_reservation) {
+      fetchOrderFoods();
+    }
+  }, [reservation?.id_reservation, orderFoodsPage]);
 
   if (!isOpen || !reservation) return null;
   const start = new Date(reservation.waktu_mulai);
@@ -528,6 +622,89 @@ function ReservationDetailModal({ isOpen, onClose, reservation, onDelete, fetchR
             <strong>Metode Pembayaran:</strong>{" "}
             {reservation.payment_method || "Belum Ditentukan"}
           </div>
+        </div>
+
+        <div className="mt-4">
+          <h4 className="mb-2 text-sm font-semibold text-gray-900 dark:text-white">
+            Order Makanan
+          </h4>
+          {orderFoodsLoading ? (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Memuat order makanan...
+            </p>
+          ) : orderFoods.length === 0 ? (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Belum ada order makanan.
+            </p>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+              <table className="min-w-full text-xs">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-semibold">Menu</th>
+                    <th className="px-3 py-2 text-right font-semibold">Qty</th>
+                    <th className="px-3 py-2 text-right font-semibold">Harga</th>
+                    <th className="px-3 py-2 text-right font-semibold">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {orderFoods.map((row) => {
+                    const harga = Number(row.food_list?.harga ?? 0);
+                    const qty = Number(row.jumlah ?? 0);
+                    const subtotal = harga * qty;
+                    return (
+                      <tr key={row.id_order}>
+                        <td className="px-3 py-2">{row.food_list?.nama_makanan ?? "-"}</td>
+                        <td className="px-3 py-2 text-right">{qty}</td>
+                        <td className="px-3 py-2 text-right">Rp {harga}</td>
+                        <td className="px-3 py-2 text-right">Rp {subtotal}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {orderFoods.length > 0 && (
+            <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <span>
+                Menampilkan{" "}
+                <span className="font-semibold">
+                  {orderFoodsTotal === 0 ? 0 : (orderFoodsPage - 1) * 5 + 1}
+                </span>
+                {" - "}
+                <span className="font-semibold">
+                  {orderFoodsTotal === 0 ? 0 : Math.min(orderFoodsPage * 5, orderFoodsTotal)}
+                </span>{" "}
+                dari <span className="font-semibold">{orderFoodsTotal}</span> item
+              </span>
+              <div className="inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setOrderFoodsPage((p) => Math.max(1, p - 1))}
+                  disabled={orderFoodsPage === 1}
+                  className="rounded-md bg-indigo-600 px-2 py-1 text-white disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <span>
+                  Hal {orderFoodsPage} / {orderFoodsTotalPages || 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOrderFoodsPage((p) =>
+                      Math.min(orderFoodsTotalPages || 1, p + 1)
+                    )
+                  }
+                  disabled={orderFoodsPage >= (orderFoodsTotalPages || 1)}
+                  className="rounded-md bg-indigo-600 px-2 py-1 text-white disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div className="mt-4 flex gap-3">
           {!reservation.payment_status && <button
@@ -919,6 +1096,7 @@ function ReservationHistoryTable({ reservations = [], onDelete, onPay }) {
 }
 
 export default function Reservation() {
+  const [searchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -941,10 +1119,14 @@ export default function Reservation() {
   const [customers, setCustomers] = useState([]);
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customersError, setCustomersError] = useState("");
+  const [customerPage, setCustomerPage] = useState(1);
+  const [customerTotalPages, setCustomerTotalPages] = useState(1);
+  const [customerSearch, setCustomerSearch] = useState("");
   const [rooms, setRooms] = useState([]);
   const [roomsLoading, setRoomsLoading] = useState(false);
   const [roomsError, setRoomsError] = useState("");
   const [notif, setNotif] = useState(null);
+  const [allowPastReservation, setAllowPastReservation] = useState(false);
   const showNotif = (msg, type = "success") => {
     setNotif({ msg, type });
     setTimeout(() => setNotif(null), 2500);
@@ -981,6 +1163,22 @@ export default function Reservation() {
   }, []);
 
   useEffect(() => {
+    const view = searchParams.get("view");
+    const unpaid = searchParams.get("unpaid");
+    const search = searchParams.get("search");
+    if (view === "history") {
+      setShowHistory(true);
+    }
+    if (unpaid === "true") {
+      setOnlyUnpaid(true);
+      setHistoryPage(1);
+    }
+    if (search) {
+      setSearchQuery(search);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     try {
       localStorage.setItem("rp_search_history", JSON.stringify(searchHistory));
     } catch (e) {
@@ -1009,7 +1207,7 @@ export default function Reservation() {
 
   useEffect(() => {
     fetchCustomers();
-  }, []);
+  }, [customerPage, customerSearch]);
 
   useEffect(() => {
     if (showHistory) {
@@ -1021,7 +1219,7 @@ export default function Reservation() {
     try {
       setRoomsLoading(true);
       setRoomsError("");
-      const data = await apiGet("/rooms");
+      const data = await apiGet("/rooms?all=true");
       const list = Array.isArray(data) ? data : data?.data ?? [];
       setRooms(list);
     } catch (e) {
@@ -1037,17 +1235,24 @@ export default function Reservation() {
     try {
       setCustomersLoading(true);
       setCustomersError("");
-      const payload = await apiGet("/customer?all=true");
+      const params = new URLSearchParams({
+        page: String(customerPage),
+        limit: "10",
+        search: customerSearch.trim(),
+      });
+      const payload = await apiGet(`/customer?${params.toString()}`);
       const list = Array.isArray(payload?.data)
         ? payload.data
         : Array.isArray(payload)
           ? payload
           : [];
       setCustomers(list);
+      setCustomerTotalPages(payload?.pagination?.totalPages ?? 1);
     } catch (e) {
       console.error(e);
       setCustomers([]);
       setCustomersError("Gagal memuat data pelanggan.");
+      setCustomerTotalPages(1);
     } finally {
       setCustomersLoading(false);
     }
@@ -1129,6 +1334,7 @@ export default function Reservation() {
   const handleOpenModal = (reservation = null, isNew = false) => {
     setSelectedReservation(reservation);
     setIsModalNew(isNew);
+    setAllowPastReservation(false);
     setIsModalOpen(true);
   };
 
@@ -1140,11 +1346,11 @@ export default function Reservation() {
 
   const handleSaveReservation = async (formData) => {
     if (!formData?.customer_id) {
-      alert("Pilih pelanggan terlebih dahulu.");
+      showNotif("Pilih pelanggan terlebih dahulu.", "error");
       return;
     }
     if (!formData?.room_id) {
-      alert("Pilih ruangan terlebih dahulu.");
+      showNotif("Pilih ruangan terlebih dahulu.", "error");
       return;
     }
     const payload = {
@@ -1156,6 +1362,7 @@ export default function Reservation() {
       time: formData.time,
       duration: formData.duration,
       payment_method: formData.payment_method || "Cash",
+      allow_past: allowPastReservation,
     };
     try {
       if (isModalNew || !selectedReservation?.id_reservation) {
@@ -1173,7 +1380,10 @@ export default function Reservation() {
       handleCloseModal();
     } catch (e) {
       console.error(e);
-      alert("Gagal menyimpan reservasi. Coba cek backend / console.");
+      showNotif(
+        e?.message || "Gagal menyimpan reservasi. Coba cek backend / console.",
+        "error"
+      );
     }
   };
 
@@ -1223,10 +1433,10 @@ export default function Reservation() {
       fetchReservationsByDate(selectedDate);
     } catch (e) {
       console.error(e);
-      alert("Gagal menghapus reservasi.");
+      showNotif("Gagal menghapus reservasi.", "error");
     }
   };
-const handlePayReservationHistory = async (id) => {
+  const handlePayReservationHistory = async (id) => {
     try {
       await apiPost(`/reservations/pay/${id}`, { reservation_id: id });
       
@@ -1236,7 +1446,7 @@ const handlePayReservationHistory = async (id) => {
       fetchReservationsByDate(selectedDate);
     } catch (e) {
       console.error(e);
-      alert("Gagal memperbarui pembayaran.");
+      showNotif("Gagal memperbarui pembayaran.", "error");
     }
   };
 
@@ -1579,6 +1789,13 @@ const handlePayReservationHistory = async (id) => {
         customers={customers}
         customersLoading={customersLoading}
         customersError={customersError}
+        customerPage={customerPage}
+        customerTotalPages={customerTotalPages}
+        setCustomerPage={setCustomerPage}
+        setCustomerSearch={setCustomerSearch}
+        showNotif={showNotif}
+        allowPastReservation={allowPastReservation}
+        setAllowPastReservation={setAllowPastReservation}
         fetchReservations={() => fetchReservationsByDate(selectedDate)}
       />
       <ReservationDetailModal

@@ -73,7 +73,7 @@ export default function Customer() {
     if (loadingMemberships) return;
     setLoadingMemberships(true);
     try {
-      const data = await apiGet("/membership");
+      const data = await apiGet("/membership?all=true");
       setMemberships(data);
     } catch (error) {
       console.error("Failed to fetch membership list", error);

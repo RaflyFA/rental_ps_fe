@@ -87,16 +87,7 @@ export default function QuickOrder() {
     setPage(1);
   }, [query]);
 
-  const items = useMemo(
-    () =>
-      Object.entries(cart)
-        .map(([id, qty]) => ({
-          qty,
-          food: foods.find((f) => String(f.id_food) === String(id)),
-        }))
-        .filter((i) => i.food),
-    [cart, foods]
-  );
+  const items = useMemo(() => Object.values(cart), [cart]);
 
   const totalAmount = items.reduce(
     (sum, item) => sum + Number(item.food.harga) * item.qty,
@@ -104,16 +95,23 @@ export default function QuickOrder() {
   );
 
   const add = (food) =>
-    setCart((c) => ({
-      ...c,
-      [food.id_food]: (c[food.id_food] || 0) + 1,
-    }));
+    setCart((c) => {
+      const existing = c[food.id_food];
+      const nextQty = (existing?.qty || 0) + 1;
+      return {
+        ...c,
+        [food.id_food]: { food, qty: nextQty },
+      };
+    });
 
   const dec = (food) =>
     setCart((c) => {
-      const nextQty = (c[food.id_food] || 0) - 1;
+      const existing = c[food.id_food];
+      const nextQty = (existing?.qty || 0) - 1;
       const { [food.id_food]: _, ...rest } = c;
-      return nextQty > 0 ? { ...c, [food.id_food]: nextQty } : rest;
+      return nextQty > 0
+        ? { ...c, [food.id_food]: { food, qty: nextQty } }
+        : rest;
     });
 
   const remove = (id) =>
@@ -126,11 +124,11 @@ export default function QuickOrder() {
   async function placeOrder() {
     const payload = {
       reservation_id: Number(reservationId),
-      items: items.map((i) => ({
-        food_id: i.food.id_food,
-        jumlah: i.qty,
-      })),
-    };
+          items: items.map((i) => ({
+            food_id: i.food.id_food,
+            jumlah: i.qty,
+          })),
+        };
 
     try {
       await apiPost("/order-foods", payload);
@@ -181,7 +179,7 @@ export default function QuickOrder() {
                         <Minus className="h-4 w-4" />
                       </button>
                       <span className="w-8 text-center text-sm font-medium">
-                        {cart[f.id_food]}
+                        {cart[f.id_food]?.qty}
                       </span>
                       <button
                         onClick={() => add(f)}

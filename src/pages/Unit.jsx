@@ -80,7 +80,7 @@ export default function Unit() {
 
   const fetchRooms = async () => {
     try {
-      const data = await apiGet("/room");
+      const data = await apiGet("/room?all=true");
       setRooms(data);
     } catch (err) {
       showNotif("Gagal memuat data room", "error");
@@ -373,6 +373,7 @@ export default function Unit() {
         <GameManagerModal 
           unit={selectedUnitForGames} 
           onClose={() => setSelectedUnitForGames(null)} 
+          showNotif={showNotif}
         />
       )}
 
@@ -421,32 +422,67 @@ export default function Unit() {
 }
 
 
-function GameManagerModal({ unit, onClose }) {
+function GameManagerModal({ unit, onClose, showNotif }) {
   const [games, setGames] = useState([]);
   const [allGames, setAllGames] = useState([]);
   const [selectedGameId, setSelectedGameId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 6;
+  const [allGamesPage, setAllGamesPage] = useState(1);
+  const [allGamesTotalPages, setAllGamesTotalPages] = useState(1);
+  const [allGamesSearch, setAllGamesSearch] = useState("");
 
   useEffect(() => {
     if (unit) {
-      fetchInstalledGames();
+      setPage(1);
+      setAllGamesPage(1);
+      setAllGamesSearch("");
       fetchAllGames();
     }
   }, [unit]);
 
+  useEffect(() => {
+    if (unit) {
+      fetchAllGames();
+    }
+  }, [unit, allGamesPage, allGamesSearch]);
+
+  useEffect(() => {
+    if (unit) {
+      fetchInstalledGames();
+    }
+  }, [unit, page]);
+
   const fetchInstalledGames = async () => {
     try {
       // API: GET /unit/:id/games
-      const data = await apiGet(`/unit/${unit.id_unit}/games`); 
-      setGames(data || []);
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(pageSize),
+      });
+      const response = await apiGet(`/unit/${unit.id_unit}/games?${params.toString()}`);
+      const list = Array.isArray(response) ? response : response?.data ?? [];
+      setGames(list);
+      setTotal(response?.meta?.total ?? list.length);
+      setTotalPages(response?.meta?.totalPages ?? 1);
     } catch (err) { console.error(err) }
   };
 
   const fetchAllGames = async () => {
     try {
       // Ambil list semua game untuk dropdown
-      const response = await apiGet(`/games?limit=100`); 
-      setAllGames(response.data || response || []);
+      const params = new URLSearchParams({
+        page: String(allGamesPage),
+        limit: "10",
+        search: allGamesSearch.trim(),
+      });
+      const response = await apiGet(`/games?${params.toString()}`);
+      const list = response.data || response || [];
+      setAllGames(list);
+      setAllGamesTotalPages(response.meta?.totalPages ?? 1);
     } catch (err) { console.error(err) }
   };
 
@@ -459,7 +495,9 @@ function GameManagerModal({ unit, onClose }) {
       await fetchInstalledGames(); // Refresh list lokal
       setSelectedGameId(""); // Reset dropdown
     } catch (err) {
-      alert("Gagal menambahkan game (Mungkin sudah ada?)");
+      if (typeof showNotif === "function") {
+        showNotif("Gagal menambahkan game (Mungkin sudah ada?)", "error");
+      }
     }
     setLoading(false);
   };
@@ -469,7 +507,7 @@ function GameManagerModal({ unit, onClose }) {
     try {
       // API: DELETE /unit/games/:id
       await apiDelete(`/unit/games/${id_install}`);
-      setGames(prev => prev.filter(g => g.id_install !== id_install));
+      await fetchInstalledGames();
     } catch { }
   };
 
@@ -518,9 +556,55 @@ function GameManagerModal({ unit, onClose }) {
           )}
         </div>
 
+        <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
+          <span>
+            Menampilkan{" "}
+            <span className="font-semibold">
+              {total === 0 ? 0 : (page - 1) * pageSize + 1}
+            </span>
+            {" - "}
+            <span className="font-semibold">
+              {total === 0 ? 0 : Math.min(page * pageSize, total)}
+            </span>{" "}
+            dari <span className="font-semibold">{total}</span> game
+          </span>
+          <div className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded-lg bg-indigo-600 px-2 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-40 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            >
+              Prev
+            </button>
+            <span>
+              Hal {page} / {totalPages || 1}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages || 1, p + 1))}
+              disabled={page >= (totalPages || 1)}
+              className="rounded-lg bg-indigo-600 px-2 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-40 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+
         {/* Footer: Tambah Game */}
         <div className="border-t border-gray-100 p-5 bg-gray-50 dark:border-gray-800 dark:bg-gray-900 rounded-b-2xl">
           <label className="text-xs font-semibold uppercase text-gray-500 mb-2 block">Install Game Baru</label>
+          <div className="mb-2">
+            <input
+              value={allGamesSearch}
+              onChange={(e) => {
+                setAllGamesSearch(e.target.value);
+                setAllGamesPage(1);
+              }}
+              placeholder="Cari game..."
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 dark:border-gray-700 dark:bg-gray-800"
+            />
+          </div>
           <div className="flex gap-2">
             <select 
               className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 dark:border-gray-700 dark:bg-gray-800"
@@ -541,6 +625,27 @@ function GameManagerModal({ unit, onClose }) {
             >
               {loading ? "..." : "Tambah"}
             </button>
+          </div>
+          <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>Hal {allGamesPage} / {allGamesTotalPages || 1}</span>
+            <div className="inline-flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setAllGamesPage((p) => Math.max(1, p - 1))}
+                disabled={allGamesPage === 1}
+                className="rounded-lg bg-indigo-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-40 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                onClick={() => setAllGamesPage((p) => Math.min(allGamesTotalPages || 1, p + 1))}
+                disabled={allGamesPage >= (allGamesTotalPages || 1)}
+                className="rounded-lg bg-indigo-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-40 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
 

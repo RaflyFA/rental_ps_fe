@@ -1,11 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { apiDelete, apiGet, apiPost, apiPut } from "../lib/api";
+
+const PAGE_SIZE = 10;
 
 export default function Membership() {
   const [memberships, setMemberships] = useState([]);
   const [loadingMemberships, setLoadingMemberships] = useState(false);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [modalState, setModalState] = useState({ open: false, mode: "create" });
   const [notif, setNotif] = useState(null);
   const [formData, setFormData] = useState({
@@ -15,33 +20,36 @@ export default function Membership() {
     poin_bonus: "",
   });
   const [confirmDelete, setConfirmDelete] = useState({ open: false, target: null });
-  const hasFetchedRef = useRef(false);
   const showNotif = (msg, type = "success") => {
     setNotif({ msg, type });
     setTimeout(() => setNotif(null), 2500);
   };
-  const filtered = useMemo(() => {
-    return memberships.filter((item) => item.nama_tier.toLowerCase().includes(query.toLowerCase()));
-  }, [memberships, query]);
-
   const fetchMemberships = async () => {
-    if (loadingMemberships) return;
     setLoadingMemberships(true);
     try {
-      const data = await apiGet("/membership");
-      setMemberships(Array.isArray(data) ? data : []);
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(PAGE_SIZE),
+        search: query.trim(),
+      });
+      const response = await apiGet(`/membership?${params.toString()}`);
+      setMemberships(response.data || []);
+      setTotal(response.meta?.total ?? 0);
+      setTotalPages(response.meta?.totalPages ?? 1);
     } catch (error) {
       console.error("Failed to fetch membership list", error);
+      setMemberships([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoadingMemberships(false);
     }
   };
 
   useEffect(() => {
-    if (hasFetchedRef.current) return;
-    hasFetchedRef.current = true;
     fetchMemberships();
-  }, []);
+  }, [page, query]);
+
 
   const closeModal = () => {
     setModalState({ open: false, mode: "create" });
@@ -123,6 +131,11 @@ export default function Membership() {
 
   const closeConfirmModal = () => setConfirmDelete({ open: false, target: null });
 
+  const safeTotalPages = totalPages || 1;
+  const currentPage = Math.min(page, safeTotalPages);
+  const from = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const to = total === 0 ? 0 : Math.min(currentPage * PAGE_SIZE, total);
+
   return (
     <>
     <section className="space-y-6">
@@ -133,7 +146,10 @@ export default function Membership() {
             <Search className="h-5 w-5 text-gray-400" />
             <input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setPage(1);
+                setQuery(e.target.value);
+              }}
               placeholder="Cari tier..."
               className="w-48 bg-transparent text-sm outline-none placeholder:text-gray-400"
             />
@@ -175,10 +191,12 @@ export default function Membership() {
                   Sedang memuat tier membership...
                 </td>
               </tr>
-            ) : filtered.length > 0 ? (
-              filtered.map((item, index) => (
+            ) : memberships.length > 0 ? (
+              memberships.map((item, index) => (
                 <tr key={item.id_membership}>
-                  <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {(page - 1) * PAGE_SIZE + index + 1}
+                  </td>
                   <td className="px-4 py-3 text-sm font-medium">{item.nama_tier}</td>
                   <td className="px-4 py-3 text-sm">{item.diskon_persen ?? "-"}</td>
                   <td className="px-4 py-3 text-sm">{item.poin_bonus ?? "-"}</td>
@@ -209,6 +227,48 @@ export default function Membership() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between">
+        <p className="text-gray-500 dark:text-gray-400">
+          Menampilkan{" "}
+          <span className="font-semibold text-gray-700 dark:text-gray-200">{from}</span>
+          {" - "}
+          <span className="font-semibold text-gray-700 dark:text-gray-200">{to}</span> dari{" "}
+          <span className="font-semibold text-gray-700 dark:text-gray-200">{total}</span> tier
+        </p>
+
+        <div className="inline-flex items-center gap-2 self-end md:self-auto">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 transition-all
+              ${currentPage === 1
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-600"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
+          >
+            <span>Prev</span>
+          </button>
+
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300 min-w-[80px] text-center">
+            Hal {currentPage} / {safeTotalPages}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(safeTotalPages, p + 1))}
+            disabled={currentPage >= safeTotalPages}
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 transition-all
+              ${currentPage >= safeTotalPages
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-600"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
+          >
+            <span>Next</span>
+          </button>
+        </div>
       </div>
 
       {modalState.open && (
