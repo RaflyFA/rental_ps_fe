@@ -164,29 +164,17 @@ export default function FoodList() {
           </colgroup>
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                ID
-              </th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Nama
-              </th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Harga
-              </th>
-              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">
-                Action
-              </th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">ID</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Nama</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Harga</th>
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-900">
             {foods.map((f) => (
               <tr key={f.id_food}>
-                <td className="px-4 py-3 font-normal text-sm text-gray-500">
-                  {f.id_food}
-                </td>
-                <td className="px-4 py-3 text-sm font-normal">
-                  {f.nama_makanan}
-                </td>
+                <td className="px-4 py-3 font-normal text-sm text-gray-500">{f.id_food}</td>
+                <td className="px-4 py-3 text-sm font-normal">{f.nama_makanan}</td>
                 <td className="px-4 py-3 text-sm">
                   {new Intl.NumberFormat("id-ID", {
                     style: "currency",
@@ -194,7 +182,7 @@ export default function FoodList() {
                     maximumFractionDigits: 0,
                   }).format(Number(f.harga))}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-center">
                   <button
                     title="Edit"
                     onClick={() => openEditModal(f)}

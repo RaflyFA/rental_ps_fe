@@ -174,22 +174,11 @@ export default function Unit() {
           
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                No
-              </th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Nama Unit
-              </th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Nama Room
-              </th>
-              {/* UBAH HEADER DARI DESKRIPSI KE GAME */}
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Game Terinstall
-              </th>
-              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">
-                Aksi
-              </th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">No</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Nama Unit</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Nama Room</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Game Terinstall</th>
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">Aksi</th>
             </tr>
           </thead>
 
@@ -253,7 +242,7 @@ export default function Unit() {
       {/* PAGINATION */}
       <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between rounded-b-2xl mt-[-1rem] z-10 relative">
         <p className="text-gray-500 dark:text-gray-400">
-          Menampilkan{" "}
+          Menampilkan unit{" "}
           <span className="font-semibold text-gray-900 dark:text-white">
             {total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}
           </span>
@@ -261,11 +250,9 @@ export default function Unit() {
           <span className="font-semibold text-gray-900 dark:text-white">
             {Math.min(page * PAGE_SIZE, total)}
           </span>
-          {" "}dari{" "}
-          <span className="font-semibold text-gray-900 dark:text-white">
-            {total}
-          </span>{" "}
-          unit
+          <span className="ml-2 text-xs text-gray-400">
+            (Total {total} unit)
+          </span>
         </p>
 
         <div className="inline-flex items-center gap-2 self-end md:self-auto">

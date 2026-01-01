@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, Pencil, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api.js";
 
-const itemMax = 5;
+const PAGE_SIZE = 6;
 
 export default function Room() {
   const [rooms, setRooms] = useState([]);
@@ -25,7 +25,7 @@ export default function Room() {
       setLoading(true);
       const params = new URLSearchParams({
         page: String(page),
-        limit: String(itemMax),
+        limit: String(PAGE_SIZE),
         search: query.trim(),
       });
       const response = await apiGet(`/room/with-price?${params.toString()}`);
@@ -45,12 +45,12 @@ export default function Room() {
     fetchRooms();
   }, [page, query]);
 
-  const pageCount = Math.max(1, totalPages || 1);
-  const currentPage = Math.min(page, pageCount);
-  const startIndex = (currentPage - 1) * itemMax;
+  const safeTotalPages = totalPages || 1;
+  const currentPage = Math.min(page, safeTotalPages);
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
   const paginatedRooms = rooms;
   const from = total === 0 ? 0 : startIndex + 1;
-  const to = total === 0 ? 0 : Math.min(startIndex + itemMax, total);
+  const to = total === 0 ? 0 : Math.min(startIndex + PAGE_SIZE, total);
   const saveRoom = async (e) => {
     e.preventDefault();
     const payload = {
@@ -100,7 +100,7 @@ export default function Room() {
                 setPage(1);
                 setQuery(e.target.value);
               }}
-              placeholder="Cari ruangan…"
+              placeholder="Cari ruangan..."
               className="w-56 bg-transparent text-sm outline-none placeholder:text-gray-400"
             />
           </div>
@@ -127,27 +127,26 @@ export default function Room() {
           </colgroup>
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">Nama Ruangan</th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">Tipe</th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">Kapasitas</th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">Harga per Jam</th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide">Aksi</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Nama Ruangan</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Tipe</th>
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">Kapasitas</th>
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">Harga per Jam</th>
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-900">
             {paginatedRooms.map((room) => (
               <tr key={room.id_room}>
-                <td className="px-4 py-3 text-sm font-medium">{room.nama_room}</td>
-                <td className="px-4 py-3 text-sm font-medium">{room.tipe_room}</td>
-                <td className="px-4 py-3 text-sm font-medium">{room.kapasitas}</td>
-                <td className="px-4 py-3 text-sm">
+                <td className="px-4 py-3 text-sm font-normal">{room.nama_room}</td>
+                <td className="px-4 py-3 text-sm font-normal">{room.tipe_room}</td>
+                <td className="px-4 py-3 text-sm text-center font-normal">{room.kapasitas}</td>
+                <td className="px-4 py-3 text-sm text-center">
                   {new Intl.NumberFormat("id-ID", {
                     style: "currency",
                     currency: "IDR",
                     maximumFractionDigits: 0,
                   }).format(Number(room.price_list?.[0]?.harga_per_jam))}
                 </td>
-
                 <td className="px-4 py-3 text-center space-x-2">
                   <button
                     onClick={() => {
@@ -164,7 +163,7 @@ export default function Room() {
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
-
+                  
                   <button
                     onClick={() => setDeleteConfirm({ open: true, id: room.id_room })}
                     className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
@@ -292,38 +291,44 @@ export default function Room() {
           {notif.msg}
         </div>
       )}
-      <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between rounded-b-2xl mt-[-1rem] z-10 relative">
         <p className="text-gray-500 dark:text-gray-400">
-          Menampilkan <span className="font-semibold">{from}</span>-<span className="font-semibold text-gray-700 dark:text-gray-200">{to}</span> dari{" "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">{total}</span> ruangan
+          Menampilkan ruangan{" "}
+          <span className="font-semibold text-gray-900 dark:text-white">{from}</span>
+          {" - "}
+          <span className="font-semibold text-gray-900 dark:text-white">{to}</span>
+          <span className="ml-2 text-xs text-gray-400">
+            (Total {total} ruangan)
+          </span>
         </p>
-        <div className="inline-flex items-center gap-2">
+
+        <div className="inline-flex items-center gap-2 self-end md:self-auto">
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 transition-all
               ${currentPage === 1 
-                ? "bg-indigo-300 text-white cursor-not-allowed"
-                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95"
-              }
-            `}
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-600" 
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className="text-xs text-gray-600 dark:text-gray-300">
-            Halaman {currentPage} / {pageCount}
+
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300 min-w-[80px] text-center">
+            Hal {currentPage} / {safeTotalPages}
           </span>
+
           <button
             type="button"
-            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-            disabled={currentPage === pageCount}
-            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2
-              ${currentPage === pageCount
-                ? "bg-indigo-300 text-white cursor-not-allowed"
-                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95"
-              }
-            `}
+            onClick={() => setPage((p) => Math.min(safeTotalPages, p + 1))}
+            disabled={currentPage >= safeTotalPages}
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 transition-all
+              ${currentPage >= safeTotalPages 
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-600" 
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -332,5 +337,6 @@ export default function Room() {
     </section>
   );
 }
+
 
 

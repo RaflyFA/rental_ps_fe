@@ -144,19 +144,10 @@ export default function Games() {
           
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                No
-              </th>
-              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">
-                Nama Game
-              </th>
-              {/* UBAH HEADER JADI LEBIH RELEVAN */}
-              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">
-                Ketersediaan
-              </th>
-              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">
-                Aksi
-              </th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">No</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Nama Game</th>
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">Ketersediaan</th>
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">Aksi</th>
             </tr>
           </thead>
 

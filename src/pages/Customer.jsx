@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { apiDelete, apiGet, apiPost, apiPut } from "../lib/api";
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 6;
 
 export default function Customer() {
   const [customers, setCustomers] = useState([]);
@@ -37,15 +37,6 @@ export default function Customer() {
     }, {});
   }, [memberships]);
 
-  const filtered = useMemo(() => {
-    return customers.filter((customer) => {
-      const matchName = customer.nama?.toLowerCase().includes(query.toLowerCase());
-      const tierName = membershipLookup[customer.membership_id]?.nama_tier.toLowerCase() ?? "";
-      const matchTier = tierName.includes(query.toLowerCase());
-      return matchName || matchTier;
-    });
-  }, [customers, membershipLookup, query]);
-
   const fetchCustomer = async (pageParam = 1, { force = false } = {}) => {
     if (!force && lastFetchedPageRef.current === pageParam) {
       return;
@@ -53,7 +44,12 @@ export default function Customer() {
     lastFetchedPageRef.current = pageParam;
     setLoadingCustomers(true);
     try {
-      const response = await apiGet(`/customers?page=${pageParam}`);
+      const params = new URLSearchParams({
+        page: String(pageParam),
+        limit: String(DEFAULT_PAGE_SIZE),
+        search: query.trim(),
+      });
+      const response = await apiGet(`/customers?${params.toString()}`);
       const dataCust = response.data ?? [];
       const pagination = response.pagination ?? {};
       setCustomers(dataCust);
@@ -90,7 +86,12 @@ export default function Customer() {
 
   useEffect(() => {
     fetchCustomer(page);
-  }, [page]);
+  }, [page, query]);
+
+  useEffect(() => {
+    lastFetchedPageRef.current = null;
+    setPage(1);
+  }, [query]);
 
   const goToPreviousPage = () => {
     setPage((prev) => Math.max(1, prev - 1));
@@ -192,7 +193,10 @@ export default function Customer() {
             <Search className="h-5 w-5 text-gray-400" />
             <input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setPage(1);
+                setQuery(e.target.value);
+              }}
               placeholder="Cari nama / tier..."
               className="w-48 bg-transparent text-sm outline-none placeholder:text-gray-400"
             />
@@ -210,21 +214,11 @@ export default function Customer() {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
-                No
-              </th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
-                Nama
-              </th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
-                Nomor HP
-              </th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
-                Membership
-              </th>
-              <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide">
-                Aksi
-              </th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">No</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Nama</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Nomor HP</th>
+              <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-white">Membership</th>
+              <th className="px-6 py-3 text-center font-semibold text-gray-900 dark:text-white">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-900">
@@ -234,18 +228,18 @@ export default function Customer() {
                   Sedang memuat data customer...
                 </td>
               </tr>
-            ) : filtered.length > 0 ? (
-              filtered.map((customer, index) => {
+            ) : customers.length > 0 ? (
+              customers.map((customer, index) => {
                 const membership = membershipLookup[customer.membership_id];
                 return (
                   <tr key={customer.id_customer}>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 font-normal text-sm text-gray-500">
                       {(page - 1) * pageSize + index + 1}
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium">{customer.nama}</td>
-                    <td className="px-4 py-3 text-sm">{customer.no_hp || "-"}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <p className="font-medium">{membership?.nama_tier ?? "-"}</p>
+                    <td className="px-4 py-3 text-sm font-normal">{customer.nama}</td>
+                    <td className="px-4 py-3 text-sm font-normal">{customer.no_hp || "-"}</td>
+                    <td className="px-4 py-2 text-sm">
+                      <p className="font-normal">{membership?.nama_tier ?? "-"}</p>
                       {membership?.diskon_persen != null && (
                         <span className="text-xs text-gray-500">
                           Diskon {membership.diskon_persen}%
@@ -282,39 +276,53 @@ export default function Customer() {
         </table>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between rounded-b-2xl mt-[-1rem] z-10 relative">
         <p className="text-gray-500 dark:text-gray-400">
-          Halaman{" "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">{page}</span> dari{" "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">{pageCount}</span> • Total{" "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">{totalItems}</span> customer
+          Menampilkan customer{" "}
+          <span className="font-semibold text-gray-900 dark:text-white">
+            {totalItems === 0 ? 0 : (page - 1) * pageSize + 1}
+          </span>
+          {" - "}
+          <span className="font-semibold text-gray-900 dark:text-white">
+            {totalItems === 0 ? 0 : Math.min(page * pageSize, totalItems)}
+          </span>
+          <span className="ml-2 text-xs text-gray-400">
+            (Total {totalItems} customer)
+          </span>
         </p>
 
-        <div className="inline-flex items-center gap-1 self-end md:self-auto">
+        <div className="inline-flex items-center gap-2 self-end md:self-auto">
           <button
             type="button"
             onClick={goToPreviousPage}
             disabled={page === 1}
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 transition-all
+              ${page === 1
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-600"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
 
-          <span className="text-xs text-gray-600 dark:text-gray-300">
-            Halaman {page} / {pageCount}
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300 min-w-[80px] text-center">
+            Hal {page} / {pageCount}
           </span>
 
           <button
             type="button"
             onClick={goToNextPage}
             disabled={page === pageCount}
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-3 py-1 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 transition-all
+              ${page === pageCount
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-600"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
-
       {modalState.open && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
@@ -460,3 +468,4 @@ export default function Customer() {
     </>
   );
 }
+

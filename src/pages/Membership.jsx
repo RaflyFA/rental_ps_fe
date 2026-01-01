@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { apiDelete, apiGet, apiPost, apiPut } from "../lib/api";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 6;
 
 export default function Membership() {
   const [memberships, setMemberships] = useState([]);
@@ -229,13 +229,15 @@ export default function Membership() {
         </table>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between rounded-b-2xl mt-[-1rem] z-10 relative">
         <p className="text-gray-500 dark:text-gray-400">
-          Menampilkan{" "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">{from}</span>
+          Menampilkan tier{" "}
+          <span className="font-semibold text-gray-900 dark:text-white">{from}</span>
           {" - "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">{to}</span> dari{" "}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">{total}</span> tier
+          <span className="font-semibold text-gray-900 dark:text-white">{to}</span>
+          <span className="ml-2 text-xs text-gray-400">
+            (Total {total} tier)
+          </span>
         </p>
 
         <div className="inline-flex items-center gap-2 self-end md:self-auto">
@@ -249,7 +251,7 @@ export default function Membership() {
                 : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
               }`}
           >
-            <span>Prev</span>
+            <ChevronLeft className="h-4 w-4" />
           </button>
 
           <span className="text-xs font-medium text-gray-600 dark:text-gray-300 min-w-[80px] text-center">
@@ -266,7 +268,7 @@ export default function Membership() {
                 : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
               }`}
           >
-            <span>Next</span>
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
