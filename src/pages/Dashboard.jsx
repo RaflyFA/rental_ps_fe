@@ -9,9 +9,13 @@ import {
 } from 'lucide-react';
 import { apiGet } from "../lib/api";
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from "../store/useAuthStore";
+
 
 const Dashboard = () => {
   // 1. STATE HARUS KOSONG DULU (JANGAN DIISI DUMMY)
+  const currentUser = useAuthStore((s) => s.user);
+  const role = (currentUser?.role || "").toLowerCase();
   const [stats, setStats] = useState({
     revenue: "Rp 0",
     activeRooms: "0 / 0",
@@ -21,6 +25,13 @@ const Dashboard = () => {
 
   const [recentTransactions, setRecentTransactions] = useState([]); 
   const [revenueTrend, setRevenueTrend] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [selectedStaff, setSelectedStaff] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [loadingTrend, setLoadingTrend] = useState(false);
+  const [errorTrend, setErrorTrend] = useState(null);
+  const [group, setGroup] = useState("week"); // 'week' | 'month' | 'year'
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [activeRooms, setActiveRooms] = useState([]);
   const [revenueDetail, setRevenueDetail] = useState([]);
   const [revenueTotal, setRevenueTotal] = useState(0);
@@ -34,11 +45,30 @@ const Dashboard = () => {
     : 0;
 
   // 2. FETCH DATA SAAT HALAMAN DIBUKA
+  // Fetch staff list if current user is owner
+  useEffect(() => {
+    if (role === 'owner') {
+      (async () => {
+        try {
+          const res = await apiGet('/users?role=staff&limit=100');
+          // backend may return { data } or array
+          const list = res.data || res || [];
+          setStaffList(list);
+        } catch (err) {
+          console.warn('Gagal memuat daftar staff', err);
+          setStaffList([]);
+        }
+      })();
+    }
+  }, [role]);
+
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [group, selectedYear, selectedMonth, selectedStaff]);
 
   const fetchDashboardData = async () => {
+    setLoadingTrend(true);
+    setErrorTrend(null);
     try {
       // Ambil Stats (Kartu Atas)
       const statsData = await apiGet('/dashboard/stats');
@@ -48,11 +78,22 @@ const Dashboard = () => {
       const recentData = await apiGet('/dashboard/recent');
       if (recentData) setRecentTransactions(recentData);
 
-      const trendData = await apiGet('/dashboard/revenue-trend?days=7');
+      // Ambil tren pendapatan dengan group parameter
+      let endpoint = '/dashboard/revenue-trend?group=' + group;
+      if (group === 'week') endpoint += '&days=7';
+      if (group === 'month') endpoint += `&year=${selectedYear}&months=12`;
+      if (group === 'year') endpoint += '&years=5';
+      if (selectedStaff) endpoint += `&staffId=${selectedStaff}`;
+
+      const trendData = await apiGet(endpoint);
       if (trendData) setRevenueTrend(trendData);
       
     } catch (err) {
       console.error("Gagal load dashboard", err);
+      setErrorTrend(err?.message || 'Gagal memuat tren');
+      setRevenueTrend([]);
+    } finally {
+      setLoadingTrend(false);
     }
   };
 
@@ -68,14 +109,29 @@ const Dashboard = () => {
 
   const openRevenueDetail = async () => {
     try {
-      const data = await apiGet('/dashboard/revenue-detail?limit=12');
+      setRevenueDetailOpen(true);
+      // Build params according to group
+      let endpoint = '/dashboard/revenue-detail?limit=50';
+      if (group === 'week') {
+        endpoint += '&group=week&days=7';
+      } else if (group === 'month') {
+        const mm = String(selectedMonth).padStart(2, '0');
+        endpoint += `&group=month&year=${selectedYear}&month=${selectedYear}-${mm}`;
+      } else if (group === 'year') {
+        endpoint += `&group=year&years=5`;
+      }
+      if (selectedStaff) endpoint += `&staffId=${selectedStaff}`;
+
+      const data = await apiGet(endpoint);
       setRevenueDetail(data?.rows || data || []);
       setRevenueTotal(data?.totalRevenue ?? 0);
       setRevenueShownTotal(data?.shownTotal ?? 0);
       setExpandedRevenueId(null);
-      setRevenueDetailOpen(true);
     } catch (err) {
       console.error("Gagal load revenue detail", err);
+      setRevenueDetail([]);
+      setRevenueTotal(0);
+      setRevenueShownTotal(0);
     }
   };
 
@@ -136,12 +192,69 @@ const Dashboard = () => {
         <div className="lg:col-span-2 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-semibold text-gray-900 dark:text-white">Statistik Pendapatan</h3>
-            <button
-              onClick={openRevenueDetail}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-            >
-              Lihat Detail
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="inline-flex overflow-hidden rounded-lg border border-gray-200 bg-white p-1 text-sm shadow-sm">
+                <button
+                  className={`px-3 py-1 ${group === 'week' ? 'bg-indigo-600 text-white' : 'text-gray-600'}`}
+                  onClick={() => setGroup('week')}
+                >7 Hari</button>
+                <button
+                  className={`px-3 py-1 ${group === 'month' ? 'bg-indigo-600 text-white' : 'text-gray-600'}`}
+                  onClick={() => setGroup('month')}
+                >Bulanan</button>
+                <button
+                  className={`px-3 py-1 ${group === 'year' ? 'bg-indigo-600 text-white' : 'text-gray-600'}`}
+                  onClick={() => setGroup('year')}
+                >Tahunan</button>
+              </div>
+
+              {group === 'month' && (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="rounded-md border border-gray-200 bg-white px-2 py-1 text-sm"
+                  >
+                    {Array.from({ length: 5 }).map((_, idx) => {
+                      const y = new Date().getFullYear() - idx;
+                      return <option key={y} value={y}>{y}</option>;
+                    })}
+                  </select>
+
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    className="rounded-md border border-gray-200 bg-white px-2 py-1 text-sm"
+                  >
+                    {Array.from({ length: 12 }).map((_, i) => {
+                      const m = i + 1;
+                      const label = new Date(2000, i).toLocaleString('id-ID', { month: 'short' });
+                      return <option key={m} value={m}>{label}</option>;
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {role === 'owner' && (
+                <select
+                  value={selectedStaff}
+                  onChange={(e) => setSelectedStaff(e.target.value)}
+                  className="rounded-md border border-gray-200 bg-white px-2 py-1 text-sm"
+                >
+                  <option value="">Semua Staff</option>
+                  {staffList.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              )}
+
+              <button
+                onClick={openRevenueDetail}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+              >
+                Lihat Detail
+              </button>
+            </div>
           </div>
 
           <div className="h-64 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-4">
@@ -157,6 +270,20 @@ const Dashboard = () => {
                 {revenueTrend.map((point) => {
                   const height = maxTrend === 0 ? 0 : Math.round((point.total / maxTrend) * 100);
                   const barHeight = maxTrend === 0 ? 0 : Math.round((point.total / maxTrend) * 160);
+
+                  const label = (() => {
+                    if (group === 'month') {
+                      // expect point.date = 'YYYY-MM' or 'YYYY-MM-DD'
+                      const mon = point.date.slice(5,7);
+                      return new Date(point.date + '-01').toLocaleString('id-ID', { month: 'short' });
+                    }
+                    if (group === 'year') {
+                      return String(point.date).slice(0,4);
+                    }
+                    // default (week) show day part
+                    return point.date.slice(5);
+                  })();
+
                   return (
                     <div key={point.date} className="flex-1 flex flex-col items-center gap-2">
                       <div className="h-40 w-full flex items-end">
@@ -167,7 +294,7 @@ const Dashboard = () => {
                         />
                       </div>
                       <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                        {point.date.slice(5)}
+                        {label}
                       </span>
                     </div>
                   );

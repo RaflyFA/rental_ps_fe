@@ -15,7 +15,7 @@ import {
 import Logo from "./Logo";
 import { useAuthStore } from "../store/useAuthStore";
 
-const nav = [
+const baseNav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/reservation", label: "Reservation", icon: CalendarRange },
   { to: "/games", label: "List Game", icon: LucideGamepad2 },
@@ -23,9 +23,10 @@ const nav = [
   { to: "/foods", label: "Food List", icon: UtensilsCrossed },
   { to: "/rooms", label: "Room", icon: DoorOpen },
   { to: "/customer", label: "Customer", icon: SquareUserRound },
-  { to: "/membership", label: "Membership", icon: IdCard },
-  { to: "/user", label: "User", icon: User }
+  { to: "/membership", label: "Membership", icon: IdCard }
 ];
+
+// NOTE: We will resolve the final nav below based on the current user's role. Owners see full user management, staff see "Akun Saya" (profile), customers don't see a user nav.
 
 function Item(props) {
   const { to, label, icon: Icon, end } = props
@@ -52,6 +53,7 @@ ${
 export default function Sidebar({ open, onClose }) {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
+  const user = useAuthStore((state) => state.user);
 
   const handleLogout = () => {
     logout()
@@ -62,6 +64,20 @@ export default function Sidebar({ open, onClose }) {
         navigate("/login", { replace: true });
       });
   };
+
+  // Build nav based on role
+  const role = (user?.role || "").toLowerCase();
+  let nav = [...baseNav];
+
+  if (role === "owner" || role === "admin") {
+    // owner gets full user management
+    nav.push({ to: "/user", label: "User", icon: User });
+  } else if (role === "staff") {
+    // staff see personal account link instead of full user management
+    nav.push({ to: "/user/profile", label: "Akun Saya", icon: User });
+  } else {
+    // customers: do not add any user nav
+  }
 
   return (
     <aside

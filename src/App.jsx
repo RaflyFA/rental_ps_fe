@@ -7,6 +7,7 @@ import Games from "./pages/Games";
 import Room from "./pages/Room";
 import Unit from "./pages/Unit";
 import Users from "./pages/Users";
+import UserProfile from "./pages/UserProfile";
 import Customer from "./pages/Customer";
 import Membership from "./pages/Membership";
 import Login from "./pages/Login";
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="membership" element={<Membership />} />
           <Route path="unit" element={<Unit />} />
           <Route path="user" element={<Users />} />
+          <Route path="user/profile" element={<UserProfile />} />
           <Route path="orderfoods" element={<QuickOrder />}/>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

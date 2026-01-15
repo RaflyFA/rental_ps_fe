@@ -1,6 +1,8 @@
 ﻿import { useEffect, useState } from "react";
 import { Plus, Search, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../lib/api";
+import { useAuthStore } from "../store/useAuthStore";
+import { useNavigate } from "react-router-dom";
 
 function Modal({ visible, title, children, onClose }) {
   if (!visible) return null;
@@ -28,6 +30,19 @@ function Modal({ visible, title, children, onClose }) {
 const PAGE_SIZE = 10;
 
 export default function Users() {
+  const navigate = useNavigate();
+  const currentUser = useAuthStore((s) => s.user);
+  const rawRole = (currentUser?.role || "").toLowerCase();
+  const role = rawRole === "admin" ? "owner" : rawRole;
+  const isOwner = role === "owner";
+
+  // If the user is not owner, redirect to own profile
+  useEffect(() => {
+    if (role && role !== "owner") {
+      navigate("/user/profile", { replace: true });
+    }
+  }, [role]);
+
   const [users, setUsers] = useState([]);
   const [meta, setMeta] = useState({
     page: 1,
@@ -101,7 +116,10 @@ export default function Users() {
   }
   function openEdit(user) {
     setEditing(user);
-    const normalizedRole = (user.role || "staff").toLowerCase();
+    const normalizedRole =
+      (user.role || "staff").toLowerCase() === "admin"
+        ? "admin"
+        : (user.role || "staff").toLowerCase();
     setForm({
       name: user.name || "",
       email: user.email || "",
@@ -159,6 +177,10 @@ export default function Users() {
 
   // --- Delete ---
   function confirmDelete(user) {
+    const userRole = String(user.role || "").toLowerCase();
+    if (userRole === "owner" || userRole === "admin") {
+      return;
+    }
     setToDelete(user);
     setShowDelete(true);
   }
@@ -207,13 +229,15 @@ export default function Users() {
               className="w-56 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 dark:text-white"
             />
           </div>
-          <button
-            onClick={openCreate}
-            type="button"
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-          >
-            <Plus className="h-4 w-4" /> Tambah User
-          </button>
+          {isOwner && (
+            <button
+              onClick={openCreate}
+              type="button"
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            >
+              <Plus className="h-4 w-4" /> Tambah User
+            </button>
+          )}
         </div>
       </div>
 
@@ -276,7 +300,7 @@ export default function Users() {
                 </td>
                 <td className="px-4 py-3 text-sm">{u.name}</td>
                 <td className="px-4 py-3 text-sm">
-                  {String(u.role).toLowerCase() === "owner" ? "Owner" : "Staff"}
+                  {String(u.role).toLowerCase() === "admin" ? "Owner" : "Staff"}
                 </td>
                 <td className="space-x-2 px-4 py-3 text-center">
                   <button
@@ -287,18 +311,64 @@ export default function Users() {
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => confirmDelete(u)}
-                    className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {isOwner && String(u.role).toLowerCase() !== "admin" && (
+                    <button
+                      type="button"
+                      onClick={() => confirmDelete(u)}
+                      className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900/60 md:flex-row md:items-center md:justify-between rounded-b-2xl mt-[-1rem] z-10 relative">
+        <p className="text-gray-500 dark:text-gray-400">
+          Menampilkan user{" "}
+          <span className="font-semibold text-gray-900 dark:text-white">{from}</span>
+          {" - "}
+          <span className="font-semibold text-gray-900 dark:text-white">{to}</span>
+          <span className="ml-2 text-xs text-gray-400">
+            (Total {total} user)
+          </span>
+        </p>
+
+        <div className="inline-flex items-center gap-2 self-end md:self-auto">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 transition-all
+              ${page === 1
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-600"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300 min-w-[80px] text-center">
+            Hal {page} / {safeTotalPages}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(safeTotalPages, p + 1))}
+            disabled={page >= safeTotalPages}
+            className={`rounded-xl px-3 py-1 text-sm font-semibold flex items-center gap-2 transition-all
+              ${page >= safeTotalPages
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-600"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              }`}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Modal create / edit */}
@@ -345,7 +415,7 @@ export default function Users() {
             onChange={(e) => setForm({ ...form, role: e.target.value })}
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
           >
-            <option value="owner">Owner</option>
+            <option value="admin">Owner</option>
             <option value="staff">Staff</option>
           </select>
 

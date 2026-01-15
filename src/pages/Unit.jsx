@@ -145,7 +145,7 @@ export default function Unit() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari unit…"
+              placeholder="Cari unit..."
               className="w-56 bg-transparent text-sm outline-none placeholder:text-gray-400"
             />
           </div>
@@ -421,6 +421,11 @@ function GameManagerModal({ unit, onClose, showNotif }) {
   const [allGamesPage, setAllGamesPage] = useState(1);
   const [allGamesTotalPages, setAllGamesTotalPages] = useState(1);
   const [allGamesSearch, setAllGamesSearch] = useState("");
+  const [removeGameConfirm, setRemoveGameConfirm] = useState({
+    open: false,
+    id: null,
+    name: "",
+  });
 
   useEffect(() => {
     if (unit) {
@@ -489,13 +494,34 @@ function GameManagerModal({ unit, onClose, showNotif }) {
     setLoading(false);
   };
 
-  const handleRemoveGame = async (id_install) => {
-    if(!confirm("Hapus game ini dari unit?")) return;
+  const requestRemoveGame = (item) => {
+    setRemoveGameConfirm({
+      open: true,
+      id: item.id_install,
+      name: item.game?.nama_game || "game ini",
+    });
+  };
+
+  const cancelRemoveGame = () => {
+    setRemoveGameConfirm({ open: false, id: null, name: "" });
+  };
+
+  const confirmRemoveGame = async () => {
+    if (!removeGameConfirm.id) return;
     try {
       // API: DELETE /unit/games/:id
-      await apiDelete(`/unit/games/${id_install}`);
+      await apiDelete(`/unit/games/${removeGameConfirm.id}`);
       await fetchInstalledGames();
-    } catch { }
+      if (typeof showNotif === "function") {
+        showNotif("Game berhasil dihapus dari unit.");
+      }
+    } catch {
+      if (typeof showNotif === "function") {
+        showNotif("Gagal menghapus game dari unit.", "error");
+      }
+    } finally {
+      cancelRemoveGame();
+    }
   };
 
   return (
@@ -532,7 +558,7 @@ function GameManagerModal({ unit, onClose, showNotif }) {
                   </span>
                 </div>
                 <button 
-                  onClick={() => handleRemoveGame(item.id_install)}
+                  onClick={() => requestRemoveGame(item)}
                   className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
                   title="Uninstall Game"
                 >
@@ -637,6 +663,42 @@ function GameManagerModal({ unit, onClose, showNotif }) {
         </div>
 
       </div>
+      {removeGameConfirm.open && (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Hapus Game?</h2>
+              <button
+                type="button"
+                onClick={cancelRemoveGame}
+                className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-gray-800"
+                title="Tutup"
+              >
+                x
+              </button>
+            </div>
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+              Hapus {removeGameConfirm.name} dari unit ini?
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={cancelRemoveGame}
+                className="rounded-xl border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveGame}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

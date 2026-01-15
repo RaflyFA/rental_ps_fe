@@ -885,7 +885,7 @@ function TimelineSlot({
       <div className="font-medium leading-tight">{text}</div>
       {isSearchMatch && reservation && (
         <div className="mt-0.5 text-[10px] opacity-90">
-          {`${reservation.nama_room} • ${new Date(
+          {`${reservation.nama_room} - ${new Date(
             reservation.waktu_mulai
           ).getHours()}:00 - ${new Date(
             reservation.waktu_selesai
@@ -1127,6 +1127,10 @@ export default function Reservation() {
   const [roomsError, setRoomsError] = useState("");
   const [notif, setNotif] = useState(null);
   const [allowPastReservation, setAllowPastReservation] = useState(false);
+  const [deleteReservationConfirm, setDeleteReservationConfirm] = useState({
+    open: false,
+    id: null,
+  });
   const showNotif = (msg, type = "success") => {
     setNotif({ msg, type });
     setTimeout(() => setNotif(null), 2500);
@@ -1240,14 +1244,15 @@ export default function Reservation() {
         limit: "10",
         search: customerSearch.trim(),
       });
-      const payload = await apiGet(`/customer?${params.toString()}`);
+      const payload = await apiGet(`/customers?${params.toString()}`);
       const list = Array.isArray(payload?.data)
         ? payload.data
         : Array.isArray(payload)
           ? payload
           : [];
       setCustomers(list);
-      setCustomerTotalPages(payload?.pagination?.totalPages ?? 1);
+      const pagination = payload?.pagination ?? payload?.meta ?? {};
+      setCustomerTotalPages(pagination?.totalPages ?? 1);
     } catch (e) {
       console.error(e);
       setCustomers([]);
@@ -1412,9 +1417,6 @@ export default function Reservation() {
 
   const handleDeleteReservation = async (id) => {
     try {
-      const ok = window.confirm("Yakin ingin menghapus reservasi ini?");
-      if (!ok) return;
-
       await apiDelete(`/reservations/${id}`);
 
       setReservations((prev) => prev.filter((r) => r.id_reservation !== id));
@@ -1435,6 +1437,19 @@ export default function Reservation() {
       console.error(e);
       showNotif("Gagal menghapus reservasi.", "error");
     }
+  };
+  const requestDeleteReservation = (id) => {
+    setDeleteReservationConfirm({ open: true, id });
+  };
+
+  const cancelDeleteReservation = () => {
+    setDeleteReservationConfirm({ open: false, id: null });
+  };
+
+  const confirmDeleteReservation = async () => {
+    if (!deleteReservationConfirm.id) return;
+    await handleDeleteReservation(deleteReservationConfirm.id);
+    cancelDeleteReservation();
   };
   const handlePayReservationHistory = async (id) => {
     try {
@@ -1524,7 +1539,7 @@ export default function Reservation() {
                   onClick={() => setShowHistory(false)}
                   className="ml-2 rounded px-3 py-1 text-sm font-medium text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
                 >
-                  ✕ Tutup
+                  Tutup
                 </button>
               </div>
             )}
@@ -1545,7 +1560,7 @@ export default function Reservation() {
              {/* --- TABEL HISTORY --- */}
             <ReservationHistoryTable
               reservations={normalizedHistoryData} // Pake variabel baru tadi
-              onDelete={handleDeleteReservation}
+              onDelete={requestDeleteReservation}
               onPay={handlePayReservationHistory}
             />
 
@@ -1678,7 +1693,7 @@ export default function Reservation() {
                                       {m.customer_name}
                                     </div>
                                     <div className="text-[12px] opacity-90">
-                                      {m.nama_room} • {timeRange}
+                                      {m.nama_room} - {timeRange}
                                     </div>
                                   </div>
                                 </button>
@@ -1718,7 +1733,7 @@ export default function Reservation() {
                               }}
                               aria-label={`Hapus ${h}`}
                             >
-                              ✕
+                              x
                             </button>
                           </div>
                         ))}
@@ -1803,10 +1818,46 @@ export default function Reservation() {
         fetchReservations={() => fetchReservationsByDate(selectedDate)}
         onClose={() => setIsDetailOpen(false)}
         reservation={selectedDetailReservation}
-        onDelete={handleDeleteReservation}
+        onDelete={requestDeleteReservation}
         showNotif={showNotif}
       />
     </section>
+    {deleteReservationConfirm.open && (
+      <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
+        <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Hapus Reservasi?</h2>
+            <button
+              type="button"
+              onClick={cancelDeleteReservation}
+              className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-gray-800"
+              title="Tutup"
+            >
+              x
+            </button>
+          </div>
+          <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+            Reservasi yang dihapus tidak dapat dikembalikan.
+          </p>
+          <div className="mt-6 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={cancelDeleteReservation}
+              className="rounded-xl border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={confirmDeleteReservation}
+              className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Ya, Hapus
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     {notif && (
         <div
           className={`
